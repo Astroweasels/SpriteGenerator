@@ -1,0 +1,88 @@
+.export-modal {
+  background: #16213e;
+  border: 1px solid #333355;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.filename-input {
+  padding: 8px 12px;
+  border: 1px solid #333355;
+  border-radius: 6px;
+  background: #1a1a2e;
+  color: #e0e0ff;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+}
+
+.filename-input:focus {
+  outline: none;
+  border-color: #3355aa;
+}
+
+.export-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.export-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 2px solid #333355;
+  border-radius: 8px;
+  background: #1a1a2e;
+  color: #e0e0ff;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.export-target:hover {
+  border-color: #5555aa;
+}
+
+.export-target.active {
+  border-color: #3355aa;
+  background: rgba(51, 85, 170, 0.2);
+}
+
+.target-icon {
+  font-size: 22px;
+}
+
+.scale-slider,
+.columns-slider {
+  width: 100%;
+  accent-color: #3355aa;
+}
+
+.export-preview-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(51, 85, 170, 0.1);
+  border: 1px solid #333355;
+  border-radius: 6px;
+}
+
+.preview-label {
+  font-size: 12px;
+  color: #8888aa;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.preview-dims {
+  font-size: 13px;
+  color: #aaaacc;
+  font-family: 'Courier New', monospace;
+}

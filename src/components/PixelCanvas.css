@@ -1,0 +1,17 @@
+.pixel-canvas-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  flex: 1;
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.pixel-canvas {
+  cursor: crosshair;
+  image-rendering: pixelated;
+  border: 2px solid #333355;
+  border-radius: 4px;
+}
