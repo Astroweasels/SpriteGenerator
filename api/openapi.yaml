@@ -1,0 +1,183 @@
+openapi: 3.1.0
+info:
+  title: SpriteForge API
+  version: 1.0.0
+  description: |
+    Generate pixel art sprites and sprite sheets programmatically.
+    Designed for AI agents to create game assets on demand.
+  contact:
+    name: Astroweasels
+    url: https://github.com/Astroweasels/SpriteGenerator
+
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/prod
+    description: AWS Production
+    variables:
+      apiId:
+        default: REPLACE_ME
+      region:
+        default: us-east-1
+  - url: http://localhost:3001
+    description: Local development
+
+paths:
+  /generate:
+    post:
+      operationId: generateSprite
+      summary: Generate a random pixel art sprite
+      description: |
+        Creates a sprite (and optional pose variations) based on the given
+        parameters. Returns individual frame PNGs as base64 data URIs and a
+        combined sprite sheet. If the server has S3 configured, also returns
+        a pre-signed download URL that expires in 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+            examples:
+              simpleHumanoid:
+                summary: Simple humanoid character
+                value:
+                  style: humanoid
+                  size: 32
+                  symmetrical: true
+                  colorScheme: warm
+                  complexity: simple
+                  generatePoses: false
+                  poseCount: 0
+              fullCharacterSheet:
+                summary: Full character with walk cycle
+                value:
+                  style: humanoid
+                  size: 64
+                  symmetrical: true
+                  colorScheme: cool
+                  complexity: medium
+                  generatePoses: true
+                  poseCount: 4
+              neonCreature:
+                summary: Neon creature with all poses
+                value:
+                  style: creature
+                  size: 48
+                  symmetrical: true
+                  colorScheme: neon
+                  complexity: complex
+                  generatePoses: true
+                  poseCount: 7
+      responses:
+        '200':
+          description: Sprite generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+
+components:
+  schemas:
+    GenerateRequest:
+      type: object
+      required:
+        - style
+        - size
+      properties:
+        style:
+          type: string
+          enum: [humanoid, creature, mech, abstract]
+          description: The type of sprite to generate
+        size:
+          type: integer
+          minimum: 8
+          maximum: 128
+          description: Width and height of the sprite in pixels (square)
+        symmetrical:
+          type: boolean
+          default: true
+          description: Whether to mirror the sprite horizontally
+        colorScheme:
+          type: string
+          enum: [random, warm, cool, monochrome, complementary, earth, neon, pastel]
+          default: random
+          description: Color palette strategy
+        complexity:
+          type: string
+          enum: [simple, medium, complex]
+          default: medium
+          description: Detail level of the generated sprite
+        generatePoses:
+          type: boolean
+          default: false
+          description: Whether to generate animation pose frames
+        poseCount:
+          type: integer
+          minimum: 0
+          maximum: 7
+          default: 0
+          description: |
+            Number of pose frames to generate (max 7).
+            Available poses: Walk 1, Walk 2, Arms Up, Crouch, Jump, Attack R, Attack L
+
+    GenerateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        spriteSheet:
+          type: object
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+            frameCount:
+              type: integer
+            frameNames:
+              type: array
+              items:
+                type: string
+        frames:
+          type: array
+          description: Individual frame PNGs as base64 data URIs
+          items:
+            type: string
+            format: uri
+        sheet:
+          type: string
+          format: uri
+          description: Combined sprite sheet as a base64 data URI
+        sheetUrl:
+          type: string
+          format: uri
+          description: Pre-signed S3 URL (15 min expiry). Only present when S3 is configured.
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          type: string

@@ -1,4 +1,4 @@
-import { Color, Layer, SpriteFrame, SpriteSheet } from '../types';
+import type { Color, Layer, SpriteFrame, SpriteSheet } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export const TRANSPARENT: Color = { r: 0, g: 0, b: 0, a: 0 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RandomGenOptions } from '../types';
+import type { RandomGenOptions } from '../types';
 import './GenerateModal.css';
 
 interface GenerateModalProps {

@@ -1,8 +1,8 @@
-import type { Color, RandomGenOptions, SpriteFrame, SpriteSheet } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { createLayer, pixelKey } from './spriteUtils';
+import type { Color, GenerateRequest, SpriteFrame, SpriteSheet } from './types.js';
+import { createLayer, pixelKey } from './spriteUtils.js';
 
-// ---- Color scheme generators ----
+// ---- Helpers ----
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -38,7 +38,9 @@ function hslToRgb(h: number, s: number, l: number): Color {
   };
 }
 
-function generatePalette(scheme: RandomGenOptions['colorScheme'], count: number): Color[] {
+// ---- Color scheme generators ----
+
+function generatePalette(scheme: GenerateRequest['colorScheme'], count: number): Color[] {
   const colors: Color[] = [];
 
   switch (scheme) {
@@ -92,7 +94,7 @@ function generatePalette(scheme: RandomGenOptions['colorScheme'], count: number)
       }
       break;
     }
-    default: { // random
+    default: {
       for (let i = 0; i < count; i++) {
         colors.push(hslToRgb(randomInt(0, 360), randomInt(40, 100), randomInt(20, 80)));
       }
@@ -100,7 +102,6 @@ function generatePalette(scheme: RandomGenOptions['colorScheme'], count: number)
     }
   }
 
-  // Always add a darker shade for outlines
   if (colors.length > 0) {
     const base = colors[0];
     colors.unshift({
@@ -121,7 +122,6 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
   const half = Math.floor(size / 2);
   const cx = half;
 
-  // Head (top quarter)
   const headTop = Math.floor(size * 0.05);
   const headBot = Math.floor(size * 0.25);
   const headWidth = Math.floor(size * 0.15);
@@ -131,7 +131,6 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Neck
   const neckBot = headBot + Math.floor(size * 0.05);
   const neckW = Math.floor(size * 0.06);
   for (let y = headBot; y <= neckBot; y++) {
@@ -140,7 +139,6 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Torso
   const torsoBot = Math.floor(size * 0.6);
   const torsoW = Math.floor(size * 0.2);
   for (let y = neckBot; y <= torsoBot; y++) {
@@ -150,7 +148,6 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Arms
   const armTop = neckBot + 1;
   const armBot = Math.floor(size * 0.55);
   const armW = Math.floor(size * 0.06);
@@ -164,7 +161,6 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Legs
   const legTop = torsoBot + 1;
   const legBot = Math.floor(size * 0.95);
   const legW = Math.floor(size * 0.08);
@@ -186,7 +182,6 @@ function generateCreatureBody(size: number, complexity: string): boolean[][] {
   const cx = Math.floor(size / 2);
   const cy = Math.floor(size / 2);
 
-  // Main body blob
   const bodyRx = Math.floor(size * 0.3);
   const bodyRy = Math.floor(size * 0.25);
   for (let y = 0; y < size; y++) {
@@ -197,13 +192,11 @@ function generateCreatureBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Eyes
   const eyeY = cy - Math.floor(bodyRy * 0.3);
   const eyeOffset = Math.floor(bodyRx * 0.4);
   grid[eyeY][cx - eyeOffset] = true;
   grid[eyeY][cx + eyeOffset] = true;
 
-  // Legs (little stubs at the bottom)
   const legCount = complexity === 'simple' ? 2 : complexity === 'complex' ? 6 : 4;
   const legLen = Math.floor(size * 0.12);
   const spacing = Math.floor((bodyRx * 2) / (legCount + 1));
@@ -215,7 +208,6 @@ function generateCreatureBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Tail or horn
   if (complexity !== 'simple') {
     const tailLen = Math.floor(size * 0.15);
     for (let i = 0; i < tailLen; i++) {
@@ -231,7 +223,6 @@ function generateMechBody(size: number, complexity: string): boolean[][] {
   const grid: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
   const cx = Math.floor(size / 2);
 
-  // Head - square
   const headSize = Math.floor(size * 0.15);
   const headTop = Math.floor(size * 0.05);
   for (let y = headTop; y < headTop + headSize; y++) {
@@ -240,7 +231,6 @@ function generateMechBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Torso - rectangular
   const torsoTop = headTop + headSize + 1;
   const torsoBot = Math.floor(size * 0.55);
   const torsoW = Math.floor(size * 0.22);
@@ -250,7 +240,6 @@ function generateMechBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Shoulders
   const shoulderW = Math.floor(size * 0.12);
   const shoulderH = Math.floor(size * 0.1);
   for (let y = torsoTop; y < torsoTop + shoulderH; y++) {
@@ -262,7 +251,6 @@ function generateMechBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Arms
   const armTop = torsoTop + shoulderH;
   const armBot = Math.floor(size * 0.6);
   const armW = Math.floor(size * 0.06);
@@ -276,7 +264,6 @@ function generateMechBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Legs - thick
   const legTop = torsoBot + 1;
   const legBot = Math.floor(size * 0.95);
   const legW = Math.floor(size * 0.1);
@@ -290,7 +277,6 @@ function generateMechBody(size: number, complexity: string): boolean[][] {
     }
   }
 
-  // Feet
   const feetH = 3;
   const feetW = legW + 4;
   for (let y = legBot; y < Math.min(legBot + feetH, size); y++) {
@@ -310,7 +296,6 @@ function generateAbstractBody(size: number, complexity: string): boolean[][] {
   const cx = Math.floor(size / 2);
   const cy = Math.floor(size / 2);
 
-  // Generate random blobs
   const blobCount = complexity === 'simple' ? 2 : complexity === 'complex' ? 6 : 4;
   for (let b = 0; b < blobCount; b++) {
     const bx = cx + randomInt(-size / 4, size / 4);
@@ -340,7 +325,6 @@ function colorizeGrid(
   const pixels = new Map<string, Color>();
   const cx = Math.floor(size / 2);
 
-  // Outline color is first in palette
   const outlineColor = palette[0];
   const bodyColors = palette.slice(1);
 
@@ -349,7 +333,6 @@ function colorizeGrid(
     for (let x = 0; x < limit; x++) {
       if (!grid[y][x]) continue;
 
-      // Check if this is an edge pixel
       const isEdge =
         !grid[y - 1]?.[x] || !grid[y + 1]?.[x] ||
         !grid[y]?.[x - 1] || !grid[y]?.[x + 1];
@@ -377,13 +360,12 @@ function applyPoseToPixels(
 ): Map<string, Color> {
   const newPixels = new Map<string, Color>();
   const cx = Math.floor(size / 2);
-  const poses = getPoseOffsets(poseIndex, size, style);
+  const poses = getPoseOffsets(poseIndex, size);
 
   for (const [key, color] of basePixels) {
     const [x, y] = key.split(',').map(Number);
 
     let dx = 0, dy = 0;
-    // Apply pose transformations based on pixel region
     const normalizedY = y / size;
     const normalizedX = (x - cx) / (size / 2);
 
@@ -425,38 +407,32 @@ function applyPoseToPixels(
   return newPixels;
 }
 
-function getPoseOffsets(poseIndex: number, size: number, style: string) {
+function getPoseOffsets(poseIndex: number, size: number) {
   const s = Math.max(1, Math.floor(size * 0.05));
   const poseLibrary = [
-    // Idle
     [],
-    // Walk 1 - left foot forward
     [
       { region: 'leftLeg' as const, offsetX: -s, offsetY: -s },
       { region: 'rightLeg' as const, offsetX: s, offsetY: 0 },
       { region: 'leftArm' as const, offsetX: s, offsetY: 0 },
       { region: 'rightArm' as const, offsetX: -s, offsetY: 0 },
     ],
-    // Walk 2 - right foot forward
     [
       { region: 'leftLeg' as const, offsetX: s, offsetY: 0 },
       { region: 'rightLeg' as const, offsetX: -s, offsetY: -s },
       { region: 'leftArm' as const, offsetX: -s, offsetY: 0 },
       { region: 'rightArm' as const, offsetX: s, offsetY: 0 },
     ],
-    // Arms up
     [
       { region: 'leftArm' as const, offsetX: -s, offsetY: -s * 2 },
       { region: 'rightArm' as const, offsetX: s, offsetY: -s * 2 },
     ],
-    // Crouch
     [
       { region: 'torso' as const, offsetX: 0, offsetY: s },
       { region: 'head' as const, offsetX: 0, offsetY: s },
       { region: 'leftLeg' as const, offsetX: -s, offsetY: s },
       { region: 'rightLeg' as const, offsetX: s, offsetY: s },
     ],
-    // Jump
     [
       { region: 'leftLeg' as const, offsetX: -s, offsetY: s },
       { region: 'rightLeg' as const, offsetX: s, offsetY: s },
@@ -464,12 +440,10 @@ function getPoseOffsets(poseIndex: number, size: number, style: string) {
       { region: 'rightArm' as const, offsetX: s, offsetY: -s },
       { region: 'head' as const, offsetX: 0, offsetY: -s },
     ],
-    // Attack (swing right)
     [
       { region: 'rightArm' as const, offsetX: s * 3, offsetY: -s },
       { region: 'torso' as const, offsetX: s, offsetY: 0 },
     ],
-    // Attack (swing left)
     [
       { region: 'leftArm' as const, offsetX: -s * 3, offsetY: -s },
       { region: 'torso' as const, offsetX: -s, offsetY: 0 },
@@ -481,12 +455,11 @@ function getPoseOffsets(poseIndex: number, size: number, style: string) {
 
 // ---- Main generation function ----
 
-export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
+export function generateRandomSprite(options: GenerateRequest): SpriteSheet {
   const size = options.size;
   const paletteSize = options.complexity === 'simple' ? 4 : options.complexity === 'complex' ? 8 : 6;
   const palette = generatePalette(options.colorScheme, paletteSize);
 
-  // Generate base shape
   let grid: boolean[][];
   switch (options.style) {
     case 'humanoid':
@@ -503,7 +476,6 @@ export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
       break;
   }
 
-  // Apply symmetry if requested
   if (options.symmetrical) {
     const cx = Math.floor(size / 2);
     for (let y = 0; y < size; y++) {
@@ -514,10 +486,8 @@ export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
     }
   }
 
-  // Colorize
   const basePixels = colorizeGrid(grid, size, palette, options.symmetrical);
 
-  // Create base frame
   const baseLayer = createLayer('Generated');
   baseLayer.pixels = basePixels;
 
@@ -530,7 +500,6 @@ export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
 
   const frames: SpriteFrame[] = [baseFrame];
 
-  // Generate pose variations
   if (options.generatePoses) {
     const poseNames = ['Walk 1', 'Walk 2', 'Arms Up', 'Crouch', 'Jump', 'Attack R', 'Attack L'];
     const count = Math.min(options.poseCount, poseNames.length);
@@ -547,9 +516,5 @@ export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
     }
   }
 
-  return {
-    frames,
-    width: size,
-    height: size,
-  };
+  return { frames, width: size, height: size };
 }

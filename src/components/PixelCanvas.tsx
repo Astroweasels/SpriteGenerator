@@ -1,16 +1,14 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Color, Tool, SpriteFrame } from '../types';
+import type { Color, Tool, SpriteFrame } from '../types';
 import {
   pixelKey,
   colorToCSS,
-  colorsEqual,
   TRANSPARENT,
   flattenLayers,
   floodFill,
   getLinePixels,
   getRectPixels,
   getCirclePixels,
-  serializeFrame,
 } from '../utils/spriteUtils';
 import './PixelCanvas.css';
 

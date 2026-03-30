@@ -1,16 +1,14 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
+import { useState, useCallback, useEffect } from 'react';
+import type { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
 import {
   createSpriteSheet,
   createFrame,
   createLayer,
   cloneFrame,
   cloneLayer,
-  flattenLayers,
   blendColor,
   serializeFrame,
   deserializeFrame,
-  pixelKey,
 } from './utils/spriteUtils';
 import { generateRandomSprite } from './utils/generateSprite';
 import { PixelCanvas } from './components/PixelCanvas';

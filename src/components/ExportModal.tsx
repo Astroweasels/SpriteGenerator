@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SpriteSheet } from '../types';
+import type { SpriteSheet } from '../types';
 import { exportFrameAsPNG, exportSpriteSheetAsPNG, downloadDataURL } from '../utils/exportUtils';
 import './ExportModal.css';
 

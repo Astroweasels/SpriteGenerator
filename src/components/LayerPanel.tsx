@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layer } from '../types';
+import type { Layer } from '../types';
 import './LayerPanel.css';
 
 interface LayerPanelProps {

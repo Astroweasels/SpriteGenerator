@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# AWS SAM build output
+.aws-sam
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Color } from '../types';
+import type { Color } from '../types';
 import { colorToHex, hexToColor } from '../utils/spriteUtils';
 import './ColorPalette.css';
 

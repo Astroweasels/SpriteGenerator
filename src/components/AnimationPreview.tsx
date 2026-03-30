@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { SpriteSheet } from '../types';
+import type { SpriteSheet } from '../types';
 import { renderFrameToCanvas } from '../utils/exportUtils';
 import './AnimationPreview.css';
 

@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SpriteForge API — headless sprite generation service
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+
+Parameters:
+  StageName:
+    Type: String
+    Default: prod
+  ThrottleRateLimit:
+    Type: Number
+    Default: 10
+    Description: Max requests per second
+  ThrottleBurstLimit:
+    Type: Number
+    Default: 20
+    Description: Max concurrent requests
+
+Resources:
+  # --- S3 Bucket for generated sprites ---
+  SpriteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'spriteforge-sprites-${AWS::AccountId}'
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDeleteSprites
+            Status: Enabled
+            ExpirationInDays: 1
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # --- API Gateway ---
+  SpriteForgeApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - x-api-key
+      ThrottleConfig:
+        RateLimit: !Ref ThrottleRateLimit
+        BurstLimit: !Ref ThrottleBurstLimit
+
+  # --- Lambda Function ---
+  GenerateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.handler
+      CodeUri: dist/
+      Environment:
+        Variables:
+          SPRITE_BUCKET: !Ref SpriteBucket
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref SpriteBucket
+      Events:
+        GenerateSprite:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /generate
+            Method: POST
+        HealthCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /health
+            Method: GET
+
+  # --- Usage Plan (for API key throttling via REST API, optional) ---
+  # Note: HttpApi (API Gateway v2) does not natively support API keys.
+  # For API key enforcement, add a Lambda authorizer or migrate to REST API.
+  # The ThrottleConfig above provides rate limiting without keys.
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${SpriteForgeApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}'
+  SpriteBucketName:
+    Description: S3 bucket for generated sprites
+    Value: !Ref SpriteBucket

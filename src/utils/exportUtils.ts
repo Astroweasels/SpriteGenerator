@@ -1,5 +1,5 @@
-import { Color, SpriteFrame, SpriteSheet } from '../types';
-import { flattenLayers, pixelKey, colorToCSS } from './spriteUtils';
+import type { SpriteFrame, SpriteSheet } from '../types';
+import { flattenLayers, colorToCSS } from './spriteUtils';
 
 export function renderFrameToCanvas(
   ctx: CanvasRenderingContext2D,
