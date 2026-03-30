@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { GenerateRequest, GenerateResponse, ErrorResponse } from './types.js';
 import { generateRandomSprite } from './generate.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';
+import { TEMPLATE_NAMES } from './templates.js';
 
 // ---- Constants & validation ----
 
@@ -52,6 +53,15 @@ function validateRequest(body: unknown): GenerateRequest {
 
   const poseCount = generatePoses ? Math.min(Number(b.poseCount) || 4, MAX_POSES) : 0;
 
+  // Template validation (optional field)
+  let template: string | undefined;
+  if (b.template) {
+    if (typeof b.template !== 'string' || !TEMPLATE_NAMES.includes(b.template)) {
+      throw new Error(`"template" must be one of: ${TEMPLATE_NAMES.join(', ')}`);
+    }
+    template = b.template;
+  }
+
   return {
     style: style as GenerateRequest['style'],
     size,
@@ -60,6 +70,7 @@ function validateRequest(body: unknown): GenerateRequest {
     complexity: complexity as GenerateRequest['complexity'],
     generatePoses,
     poseCount,
+    ...(template ? { template } : {}),
   };
 }
 

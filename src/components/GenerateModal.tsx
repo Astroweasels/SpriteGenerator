@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { RandomGenOptions } from '../types';
+import { TEMPLATES, TEMPLATE_NAMES } from '../utils/templates';
 import './GenerateModal.css';
 
 interface GenerateModalProps {
@@ -76,6 +77,38 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
               </select>
             </div>
           </div>
+
+          {options.style === 'humanoid' && (
+            <div className="form-group">
+              <label>Character Template <span className="label-hint">(optional)</span></label>
+              <div className="template-grid">
+                <button
+                  className={`template-btn ${!options.template ? 'active' : ''}`}
+                  onClick={() => setOptions({ ...options, template: undefined })}
+                >
+                  <span className="template-icon">🎲</span>
+                  <span className="template-name">Random</span>
+                </button>
+                {TEMPLATE_NAMES.map((key) => {
+                  const tmpl = TEMPLATES[key];
+                  return (
+                    <button
+                      key={key}
+                      className={`template-btn ${options.template === key ? 'active' : ''}`}
+                      onClick={() => setOptions({ ...options, template: key })}
+                      title={tmpl.description}
+                    >
+                      <span className="template-swatch">
+                        <span className="swatch-dot" style={{ background: `rgb(${tmpl.regions.tunic[0].r},${tmpl.regions.tunic[0].g},${tmpl.regions.tunic[0].b})` }} />
+                        <span className="swatch-dot" style={{ background: `rgb(${tmpl.regions.hair[0].r},${tmpl.regions.hair[0].g},${tmpl.regions.hair[0].b})` }} />
+                      </span>
+                      <span className="template-name">{tmpl.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Color Scheme</label>

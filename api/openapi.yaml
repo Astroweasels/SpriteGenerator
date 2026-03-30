@@ -67,6 +67,16 @@ paths:
                   complexity: complex
                   generatePoses: true
                   poseCount: 7
+              adventurerTemplate:
+                summary: Green-clad adventurer with walk cycle
+                value:
+                  style: humanoid
+                  size: 32
+                  symmetrical: true
+                  complexity: medium
+                  template: adventurer
+                  generatePoses: true
+                  poseCount: 4
       responses:
         '200':
           description: Sprite generated successfully
@@ -138,6 +148,14 @@ components:
           description: |
             Number of pose frames to generate (max 7).
             Available poses: Walk 1, Walk 2, Arms Up, Crouch, Jump, Attack R, Attack L
+        template:
+          type: string
+          enum: [adventurer, knight, mage, rogue, warrior, ranger, paladin, necromancer, pirate, robot]
+          description: |
+            Optional character template. Applies region-based coloring so the
+            sprite resembles a recognisable archetype (e.g. green-clad adventurer,
+            dark-robed necromancer). Only used when style is 'humanoid'.
+            When omitted, colorScheme determines the palette instead.
 
     GenerateResponse:
       type: object

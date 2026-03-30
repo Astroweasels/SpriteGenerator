@@ -67,4 +67,5 @@ export interface RandomGenOptions {
   complexity: 'simple' | 'medium' | 'complex';
   generatePoses: boolean;
   poseCount: number;
+  template?: string;
 }

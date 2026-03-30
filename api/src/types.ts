@@ -41,6 +41,8 @@ export interface GenerateRequest {
   complexity: Complexity;
   generatePoses: boolean;
   poseCount: number;
+  /** Optional character template name for region-based coloring */
+  template?: string;
 }
 
 export interface GenerateResponse {

@@ -232,3 +232,65 @@ select:focus {
 .btn-secondary:hover {
   background: #2a2a4e;
 }
+
+/* Template grid */
+.label-hint {
+  font-size: 11px;
+  color: #666688;
+  font-weight: normal;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.template-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid #333355;
+  border-radius: 6px;
+  background: #1a1a2e;
+  color: #aaaacc;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+
+.template-btn:hover {
+  border-color: #5555aa;
+  background: #222244;
+}
+
+.template-btn.active {
+  background: #3355aa;
+  border-color: #5577cc;
+  color: #ffffff;
+}
+
+.template-icon {
+  font-size: 18px;
+}
+
+.template-swatch {
+  display: flex;
+  gap: 3px;
+}
+
+.swatch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.template-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

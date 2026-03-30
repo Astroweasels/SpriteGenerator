@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Color, GenerateRequest, SpriteFrame, SpriteSheet } from './types.js';
 import { createLayer, pixelKey } from './spriteUtils.js';
+import { TEMPLATES, pickRegionColor, getBodyRegion } from './templates.js';
 
 // ---- Helpers ----
 
@@ -350,6 +351,47 @@ function colorizeGrid(
   return pixels;
 }
 
+// ---- Template-based coloring ----
+
+function colorizeGridWithTemplate(
+  grid: boolean[][],
+  size: number,
+  templateName: string,
+  symmetrical: boolean
+): Map<string, Color> {
+  const template = TEMPLATES[templateName];
+  const pixels = new Map<string, Color>();
+  const cx = Math.floor(size / 2);
+
+  for (let y = 0; y < size; y++) {
+    const limit = symmetrical ? cx + 1 : size;
+    for (let x = 0; x < limit; x++) {
+      if (!grid[y][x]) continue;
+
+      const isEdge =
+        !grid[y - 1]?.[x] || !grid[y + 1]?.[x] ||
+        !grid[y]?.[x - 1] || !grid[y]?.[x + 1];
+
+      let color: Color;
+      if (isEdge) {
+        color = template.outline;
+      } else {
+        const region = getBodyRegion(x, y, size);
+        color = pickRegionColor(template.regions[region]);
+      }
+
+      pixels.set(pixelKey(x, y), color);
+
+      if (symmetrical && x !== cx) {
+        const mirrorX = size - 1 - x;
+        pixels.set(pixelKey(mirrorX, y), color);
+      }
+    }
+  }
+
+  return pixels;
+}
+
 // ---- Pose generation ----
 
 function applyPoseToPixels(
@@ -486,7 +528,12 @@ export function generateRandomSprite(options: GenerateRequest): SpriteSheet {
     }
   }
 
-  const basePixels = colorizeGrid(grid, size, palette, options.symmetrical);
+  let basePixels: Map<string, Color>;
+  if (options.template && TEMPLATES[options.template]) {
+    basePixels = colorizeGridWithTemplate(grid, size, options.template, options.symmetrical);
+  } else {
+    basePixels = colorizeGrid(grid, size, palette, options.symmetrical);
+  }
 
   const baseLayer = createLayer('Generated');
   baseLayer.pixels = basePixels;
