@@ -4,6 +4,7 @@ import {
   createSpriteSheet,
   createFrame,
   createLayer,
+  createSequence,
   cloneFrame,
   cloneLayer,
   blendColor,
@@ -24,6 +25,7 @@ import './App.css';
 function App() {
   const [spriteSheet, setSpriteSheet] = useState<SpriteSheet>(() => createSpriteSheet(32, 32));
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
+  const [activeSequenceId, setActiveSequenceId] = useState<string>('');
   const [currentColor, setCurrentColor] = useState<Color>({ r: 0, g: 0, b: 0, a: 255 });
   const [currentTool, setCurrentTool] = useState<Tool>('pencil');
   const [gridVisible, setGridVisible] = useState(true);
@@ -37,6 +39,11 @@ function App() {
   const [newHeight, setNewHeight] = useState(32);
 
   const activeFrame = spriteSheet.frames[activeFrameIndex];
+
+  // Ensure activeSequenceId is always valid
+  const effectiveSequenceId = spriteSheet.sequences.find(s => s.id === activeSequenceId)
+    ? activeSequenceId
+    : spriteSheet.sequences[0]?.id ?? '';
 
   // ---- Undo/Redo ----
   const saveUndo = useCallback(() => {
@@ -221,24 +228,51 @@ function App() {
   };
 
   // ---- Frame operations ----
-  const handleAddFrame = () => {
+  const handleAddFrame = (sequenceId: string) => {
     const newFrame = createFrame(`Frame ${spriteSheet.frames.length + 1}`);
-    setSpriteSheet(ss => ({ ...ss, frames: [...ss.frames, newFrame] }));
+    setSpriteSheet(ss => ({
+      ...ss,
+      frames: [...ss.frames, newFrame],
+      sequences: ss.sequences.map(s =>
+        s.id === sequenceId ? { ...s, frameIds: [...s.frameIds, newFrame.id] } : s
+      ),
+    }));
     setActiveFrameIndex(spriteSheet.frames.length);
+    setActiveSequenceId(sequenceId);
   };
 
   const handleDuplicateFrame = (index: number) => {
-    const cloned = cloneFrame(spriteSheet.frames[index]);
+    const original = spriteSheet.frames[index];
+    const cloned = cloneFrame(original);
     const newFrames = [...spriteSheet.frames];
     newFrames.splice(index + 1, 0, cloned);
-    setSpriteSheet(ss => ({ ...ss, frames: newFrames }));
+    // Add cloned frame after original in its sequence
+    setSpriteSheet(ss => ({
+      ...ss,
+      frames: newFrames,
+      sequences: ss.sequences.map(s => {
+        const pos = s.frameIds.indexOf(original.id);
+        if (pos < 0) return s;
+        const ids = [...s.frameIds];
+        ids.splice(pos + 1, 0, cloned.id);
+        return { ...s, frameIds: ids };
+      }),
+    }));
     setActiveFrameIndex(index + 1);
   };
 
   const handleDeleteFrame = (index: number) => {
     if (spriteSheet.frames.length <= 1) return;
+    const frameId = spriteSheet.frames[index].id;
     const newFrames = spriteSheet.frames.filter((_, i) => i !== index);
-    setSpriteSheet(ss => ({ ...ss, frames: newFrames }));
+    setSpriteSheet(ss => ({
+      ...ss,
+      frames: newFrames,
+      sequences: ss.sequences.map(s => ({
+        ...s,
+        frameIds: s.frameIds.filter(id => id !== frameId),
+      })),
+    }));
     setActiveFrameIndex(Math.min(activeFrameIndex, newFrames.length - 1));
   };
 
@@ -258,11 +292,50 @@ function App() {
     }));
   };
 
+  // ---- Sequence operations ----
+  const handleAddSequence = () => {
+    const newFrame = createFrame('Frame 1');
+    const seq = createSequence(`Sequence ${spriteSheet.sequences.length + 1}`, [newFrame.id]);
+    setSpriteSheet(ss => ({
+      ...ss,
+      frames: [...ss.frames, newFrame],
+      sequences: [...ss.sequences, seq],
+    }));
+    setActiveSequenceId(seq.id);
+    setActiveFrameIndex(spriteSheet.frames.length); // select the new frame
+  };
+
+  const handleDeleteSequence = (sequenceId: string) => {
+    if (spriteSheet.sequences.length <= 1) return;
+    const seq = spriteSheet.sequences.find(s => s.id === sequenceId);
+    if (!seq) return;
+    // Remove the sequence's frames from the master list
+    const idsToRemove = new Set(seq.frameIds);
+    // But keep frames that are referenced by other sequences
+    for (const otherSeq of spriteSheet.sequences) {
+      if (otherSeq.id === sequenceId) continue;
+      for (const fid of otherSeq.frameIds) idsToRemove.delete(fid);
+    }
+    const newFrames = spriteSheet.frames.filter(f => !idsToRemove.has(f.id));
+    const newSequences = spriteSheet.sequences.filter(s => s.id !== sequenceId);
+    setSpriteSheet(ss => ({ ...ss, frames: newFrames, sequences: newSequences }));
+    setActiveSequenceId(newSequences[0].id);
+    setActiveFrameIndex(0);
+  };
+
+  const handleRenameSequence = (sequenceId: string, name: string) => {
+    setSpriteSheet(ss => ({
+      ...ss,
+      sequences: ss.sequences.map(s => (s.id === sequenceId ? { ...s, name } : s)),
+    }));
+  };
+
   // ---- Generation ----
   const handleGenerate = (options: RandomGenOptions) => {
     const generated = generateRandomSprite(options);
     setSpriteSheet(generated);
     setActiveFrameIndex(0);
+    setActiveSequenceId(generated.sequences[0]?.id ?? '');
     setUndoStack([]);
     setRedoStack([]);
     setShowGenerateModal(false);
@@ -271,8 +344,10 @@ function App() {
 
   // ---- New canvas ----
   const handleNewCanvas = () => {
-    setSpriteSheet(createSpriteSheet(newWidth, newHeight));
+    const sheet = createSpriteSheet(newWidth, newHeight);
+    setSpriteSheet(sheet);
     setActiveFrameIndex(0);
+    setActiveSequenceId(sheet.sequences[0]?.id ?? '');
     setUndoStack([]);
     setRedoStack([]);
     setShowNewDialog(false);
@@ -338,7 +413,7 @@ function App() {
         </main>
 
         <aside className="right-panel">
-          <AnimationPreview spriteSheet={spriteSheet} />
+          <AnimationPreview spriteSheet={spriteSheet} activeSequenceId={effectiveSequenceId} />
           {activeFrame && (
             <LayerPanel
               layers={activeFrame.layers}
@@ -363,8 +438,13 @@ function App() {
       <FramePanel
         spriteSheet={spriteSheet}
         activeFrameIndex={activeFrameIndex}
+        activeSequenceId={effectiveSequenceId}
         onSelectFrame={setActiveFrameIndex}
+        onSelectSequence={setActiveSequenceId}
         onAddFrame={handleAddFrame}
+        onAddSequence={handleAddSequence}
+        onDeleteSequence={handleDeleteSequence}
+        onRenameSequence={handleRenameSequence}
         onDuplicateFrame={handleDuplicateFrame}
         onDeleteFrame={handleDeleteFrame}
         onReorderFrame={handleReorderFrame}

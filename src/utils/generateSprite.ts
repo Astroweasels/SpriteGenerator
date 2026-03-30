@@ -1,6 +1,6 @@
-import type { Color, RandomGenOptions, SpriteFrame, SpriteSheet } from '../types';
+import type { Color, RandomGenOptions, SpriteFrame, SpriteSheet, AnimationSequence } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { createLayer, pixelKey } from './spriteUtils';
+import { createLayer, pixelKey, createSequence } from './spriteUtils';
 import { TEMPLATES, pickRegionColor, getBodyRegion } from './templates';
 
 // ---- Color scheme generators ----
@@ -330,6 +330,71 @@ function generateAbstractBody(size: number, complexity: string): boolean[][] {
   return grid;
 }
 
+// ---- Eyes ----
+
+const EYE_WHITE: Color = { r: 255, g: 255, b: 255, a: 255 };
+const EYE_PUPIL: Color = { r: 20, g: 20, b: 30, a: 255 };
+
+/** Stamp eyes onto the pixel map after coloring. Works for humanoid/mech/creature. */
+function addEyes(
+  pixels: Map<string, Color>,
+  size: number,
+  style: string,
+  symmetrical: boolean
+): void {
+  const cx = Math.floor(size / 2);
+
+  // Eye placement depends on sprite style
+  let eyeY: number;
+  let eyeOffset: number;
+  let eyeRadius: number;
+
+  if (style === 'humanoid' || style === 'mech') {
+    // Eyes sit in the upper part of the head
+    const headTop = Math.floor(size * 0.05);
+    const headBot = Math.floor(size * 0.25);
+    eyeY = Math.floor((headTop + headBot) * 0.55); // slightly above center of head
+    eyeOffset = Math.max(1, Math.floor(size * 0.06));
+    eyeRadius = Math.max(0, Math.floor(size * 0.025));
+  } else if (style === 'creature') {
+    const cy = Math.floor(size / 2);
+    const bodyRy = Math.floor(size * 0.25);
+    eyeY = cy - Math.floor(bodyRy * 0.3);
+    eyeOffset = Math.max(1, Math.floor(size * 0.1));
+    eyeRadius = Math.max(0, Math.floor(size * 0.03));
+  } else {
+    return; // abstract has no eyes
+  }
+
+  // Draw eye dots (white with dark pupil)
+  const drawEye = (ex: number, ey: number) => {
+    // White surround (for sizes >= 24)
+    if (eyeRadius > 0) {
+      for (let dy = -eyeRadius; dy <= eyeRadius; dy++) {
+        for (let dx = -eyeRadius; dx <= eyeRadius; dx++) {
+          if (dx * dx + dy * dy <= eyeRadius * eyeRadius) {
+            const px = ex + dx;
+            const py = ey + dy;
+            if (px >= 0 && px < size && py >= 0 && py < size) {
+              pixels.set(pixelKey(px, py), EYE_WHITE);
+            }
+          }
+        }
+      }
+    }
+    // Pupil center
+    if (ex >= 0 && ex < size && ey >= 0 && ey < size) {
+      pixels.set(pixelKey(ex, ey), EYE_PUPIL);
+    }
+  };
+
+  const leftEyeX = cx - eyeOffset;
+  const rightEyeX = cx + eyeOffset;
+
+  drawEye(leftEyeX, eyeY);
+  drawEye(rightEyeX, eyeY);
+}
+
 // ---- Coloring ----
 
 function colorizeGrid(
@@ -521,6 +586,38 @@ function getPoseOffsets(poseIndex: number, size: number, style: string) {
 
 // ---- Main generation function ----
 
+/** Pose library indices and their sequence grouping */
+const POSE_SEQUENCES: { name: string; poseIndices: number[] }[] = [
+  // index 0 = idle (no transform), 1 = walk1, 2 = walk2,
+  // 3 = arms up, 4 = crouch, 5 = jump, 6 = attack R, 7 = attack L
+  { name: 'Idle',    poseIndices: [0] },
+  { name: 'Walk',    poseIndices: [0, 1, 0, 2] },       // idle→walk1→idle→walk2
+  { name: 'Jump',    poseIndices: [4, 5, 0] },           // crouch→jump→land (idle)
+  { name: 'Attack',  poseIndices: [0, 6, 7, 0] },       // idle→swing R→swing L→idle
+];
+
+function makeFrame(
+  name: string,
+  basePixels: Map<string, Color>,
+  size: number,
+  style: string,
+  poseIndex: number,
+): SpriteFrame {
+  const px = poseIndex === 0
+    ? new Map(basePixels)
+    : applyPoseToPixels(basePixels, size, poseIndex, style);
+  // Eyes on every frame
+  addEyes(px, size, style, true);
+  const layer = createLayer('Generated');
+  layer.pixels = px;
+  return {
+    id: uuidv4(),
+    name,
+    layers: [layer],
+    activeLayerId: layer.id,
+  };
+}
+
 export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
   const size = options.size;
   const paletteSize = options.complexity === 'simple' ? 4 : options.complexity === 'complex' ? 8 : 6;
@@ -562,38 +659,36 @@ export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
     basePixels = colorizeGrid(grid, size, palette, options.symmetrical);
   }
 
-  // Create base frame
-  const baseLayer = createLayer('Generated');
-  baseLayer.pixels = basePixels;
+  const frames: SpriteFrame[] = [];
+  const sequences: AnimationSequence[] = [];
 
-  const baseFrame: SpriteFrame = {
-    id: uuidv4(),
-    name: 'Idle',
-    layers: [baseLayer],
-    activeLayerId: baseLayer.id,
-  };
-
-  const frames: SpriteFrame[] = [baseFrame];
-
-  // Generate pose variations
-  if (options.generatePoses) {
-    const poseNames = ['Walk 1', 'Walk 2', 'Arms Up', 'Crouch', 'Jump', 'Attack R', 'Attack L'];
-    const count = Math.min(options.poseCount, poseNames.length);
-    for (let i = 0; i < count; i++) {
-      const posePixels = applyPoseToPixels(basePixels, size, i + 1, options.style);
-      const poseLayer = createLayer('Generated');
-      poseLayer.pixels = posePixels;
-      frames.push({
-        id: uuidv4(),
-        name: poseNames[i],
-        layers: [poseLayer],
-        activeLayerId: poseLayer.id,
-      });
+  if (options.generatePoses && options.poseCount > 0) {
+    // Build separate sequences
+    // Pick which sequence groups to include based on poseCount budget
+    let remaining = options.poseCount + 1; // +1 for the idle frame
+    for (const seqDef of POSE_SEQUENCES) {
+      if (remaining <= 0) break;
+      const seqFrames: SpriteFrame[] = [];
+      for (let i = 0; i < seqDef.poseIndices.length && remaining > 0; i++) {
+        const poseIdx = seqDef.poseIndices[i];
+        const frameName = `${seqDef.name} ${i + 1}`;
+        const frame = makeFrame(frameName, basePixels, size, options.style, poseIdx);
+        seqFrames.push(frame);
+        remaining--;
+      }
+      frames.push(...seqFrames);
+      sequences.push(createSequence(seqDef.name, seqFrames.map(f => f.id)));
     }
+  } else {
+    // Single idle frame
+    const idle = makeFrame('Idle', basePixels, size, options.style, 0);
+    frames.push(idle);
+    sequences.push(createSequence('Idle', [idle.id]));
   }
 
   return {
     frames,
+    sequences,
     width: size,
     height: size,
   };

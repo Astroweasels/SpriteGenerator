@@ -1,26 +1,42 @@
-import React, { useRef, useEffect, useState } from 'react';
-import type { SpriteSheet } from '../types';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import type { SpriteSheet, SpriteFrame } from '../types';
 import { renderFrameToCanvas } from '../utils/exportUtils';
 import './AnimationPreview.css';
 
 interface AnimationPreviewProps {
   spriteSheet: SpriteSheet;
+  activeSequenceId: string;
 }
 
-export const AnimationPreview: React.FC<AnimationPreviewProps> = ({ spriteSheet }) => {
+export const AnimationPreview: React.FC<AnimationPreviewProps> = ({ spriteSheet, activeSequenceId }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(8);
   const [currentFrame, setCurrentFrame] = useState(0);
   const previewScale = 3;
 
+  // Resolve frames for active sequence
+  const seqFrames: SpriteFrame[] = useMemo(() => {
+    const seq = spriteSheet.sequences.find(s => s.id === activeSequenceId);
+    if (!seq) return spriteSheet.frames;
+    return seq.frameIds
+      .map(id => spriteSheet.frames.find(f => f.id === id))
+      .filter(Boolean) as SpriteFrame[];
+  }, [spriteSheet, activeSequenceId]);
+
+  const seqName = spriteSheet.sequences.find(s => s.id === activeSequenceId)?.name ?? 'All';
+
   useEffect(() => {
-    if (!playing || spriteSheet.frames.length <= 1) return;
+    setCurrentFrame(0);
+  }, [activeSequenceId]);
+
+  useEffect(() => {
+    if (!playing || seqFrames.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentFrame((prev) => (prev + 1) % spriteSheet.frames.length);
+      setCurrentFrame((prev) => (prev + 1) % seqFrames.length);
     }, 1000 / fps);
     return () => clearInterval(interval);
-  }, [playing, fps, spriteSheet.frames.length]);
+  }, [playing, fps, seqFrames.length]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -34,18 +50,18 @@ export const AnimationPreview: React.FC<AnimationPreviewProps> = ({ spriteSheet 
     ctx.fillStyle = '#111122';
     ctx.fillRect(0, 0, w, h);
 
-    const frame = spriteSheet.frames[currentFrame % spriteSheet.frames.length];
+    const frame = seqFrames[currentFrame % seqFrames.length];
     if (frame) {
       renderFrameToCanvas(ctx, frame, spriteSheet.width, spriteSheet.height, previewScale);
     }
-  }, [currentFrame, spriteSheet, previewScale]);
+  }, [currentFrame, seqFrames, spriteSheet.width, spriteSheet.height, previewScale]);
 
   return (
     <div className="animation-preview">
       <div className="preview-header">
-        <span className="panel-title">Preview</span>
+        <span className="panel-title">Preview &middot; {seqName}</span>
         <span className="frame-counter">
-          {currentFrame + 1}/{spriteSheet.frames.length}
+          {currentFrame + 1}/{seqFrames.length}
         </span>
       </div>
       <canvas

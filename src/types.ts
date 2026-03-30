@@ -26,8 +26,15 @@ export interface SpriteFrame {
   activeLayerId: string;
 }
 
+export interface AnimationSequence {
+  id: string;
+  name: string;
+  frameIds: string[];
+}
+
 export interface SpriteSheet {
   frames: SpriteFrame[];
+  sequences: AnimationSequence[];
   width: number;
   height: number;
 }

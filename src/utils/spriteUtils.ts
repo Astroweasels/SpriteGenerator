@@ -1,4 +1,4 @@
-import type { Color, Layer, SpriteFrame, SpriteSheet } from '../types';
+import type { Color, Layer, SpriteFrame, SpriteSheet, AnimationSequence } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export const TRANSPARENT: Color = { r: 0, g: 0, b: 0, a: 0 };
@@ -56,12 +56,34 @@ export function createFrame(name = 'Frame 1', width?: number, height?: number): 
   };
 }
 
-export function createSpriteSheet(width = 32, height = 32): SpriteSheet {
+export function createSequence(name = 'Default', frameIds: string[] = []): AnimationSequence {
   return {
-    frames: [createFrame()],
+    id: uuidv4(),
+    name,
+    frameIds,
+  };
+}
+
+export function createSpriteSheet(width = 32, height = 32): SpriteSheet {
+  const frame = createFrame();
+  return {
+    frames: [frame],
+    sequences: [createSequence('Default', [frame.id])],
     width,
     height,
   };
+}
+
+/** Get all frames belonging to a sequence, in order */
+export function getSequenceFrames(sheet: SpriteSheet, sequenceId: string): SpriteFrame[] {
+  const seq = sheet.sequences.find(s => s.id === sequenceId);
+  if (!seq) return [];
+  return seq.frameIds.map(id => sheet.frames.find(f => f.id === id)).filter(Boolean) as SpriteFrame[];
+}
+
+/** Get the flat list of all frames (convenience for export) */
+export function getAllFrames(sheet: SpriteSheet): SpriteFrame[] {
+  return sheet.frames;
 }
 
 export function cloneLayer(layer: Layer): Layer {
