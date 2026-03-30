@@ -614,6 +614,8 @@ const POSE_SEQUENCES: { name: string; poseIndices: number[] }[] = [
   { name: 'Attack',  poseIndices: [0, 6, 7, 0] },       // idle→swing R→swing L→idle
 ];
 
+export const POSE_SEQUENCE_NAMES = POSE_SEQUENCES.map(s => s.name);
+
 function makeFrame(
   name: string,
   basePixels: Map<string, Color>,
@@ -681,25 +683,24 @@ export function generateRandomSprite(options: RandomGenOptions): SpriteSheet {
   const frames: SpriteFrame[] = [];
   const sequences: AnimationSequence[] = [];
 
-  if (options.generatePoses && options.poseCount > 0) {
-    // Build separate sequences
-    // Pick which sequence groups to include based on poseCount budget
-    let remaining = options.poseCount + 1; // +1 for the idle frame
+  const selected = new Set(options.selectedPoses);
+
+  if (selected.size > 0) {
+    // Build sequences for each selected pose preset
     for (const seqDef of POSE_SEQUENCES) {
-      if (remaining <= 0) break;
+      if (!selected.has(seqDef.name)) continue;
       const seqFrames: SpriteFrame[] = [];
-      for (let i = 0; i < seqDef.poseIndices.length && remaining > 0; i++) {
+      for (let i = 0; i < seqDef.poseIndices.length; i++) {
         const poseIdx = seqDef.poseIndices[i];
         const frameName = `${seqDef.name} ${i + 1}`;
         const frame = makeFrame(frameName, basePixels, size, options.style, poseIdx);
         seqFrames.push(frame);
-        remaining--;
       }
       frames.push(...seqFrames);
       sequences.push(createSequence(seqDef.name, seqFrames.map(f => f.id)));
     }
   } else {
-    // Single idle frame
+    // Nothing selected — single idle frame
     const idle = makeFrame('Idle', basePixels, size, options.style, 0);
     frames.push(idle);
     sequences.push(createSequence('Idle', [idle.id]));

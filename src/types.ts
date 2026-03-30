@@ -72,7 +72,6 @@ export interface RandomGenOptions {
   symmetrical: boolean;
   colorScheme: 'random' | 'warm' | 'cool' | 'monochrome' | 'complementary' | 'earth' | 'neon' | 'pastel';
   complexity: 'simple' | 'medium' | 'complex';
-  generatePoses: boolean;
-  poseCount: number;
+  selectedPoses: string[];
   template?: string;
 }

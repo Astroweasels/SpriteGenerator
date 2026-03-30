@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { RandomGenOptions } from '../types';
 import { TEMPLATES, TEMPLATE_NAMES } from '../utils/templates';
+import { POSE_SEQUENCE_NAMES } from '../utils/generateSprite';
 import './GenerateModal.css';
 
 interface GenerateModalProps {
@@ -15,8 +16,7 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
     symmetrical: true,
     colorScheme: 'random',
     complexity: 'medium',
-    generatePoses: true,
-    poseCount: 4,
+    selectedPoses: [...POSE_SEQUENCE_NAMES],
   });
 
   const handleGenerate = () => {
@@ -137,32 +137,39 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
           </div>
 
           <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={options.generatePoses}
-                onChange={(e) => setOptions({ ...options, generatePoses: e.target.checked })}
-              />
-              Generate Pose Variations (Sprite Sheet)
-            </label>
-          </div>
-
-          {options.generatePoses && (
-            <div className="form-group">
-              <label>Number of Poses: {options.poseCount}</label>
-              <input
-                type="range"
-                min="1"
-                max="7"
-                value={options.poseCount}
-                onChange={(e) => setOptions({ ...options, poseCount: parseInt(e.target.value) })}
-                className="pose-slider"
-              />
-              <div className="pose-labels">
-                <span>Walk, Arms Up, Crouch, Jump, Attack...</span>
-              </div>
+            <label>Animation Sequences</label>
+            <div className="pose-preset-grid">
+              <label className="pose-preset-label all-label">
+                <input
+                  type="checkbox"
+                  checked={options.selectedPoses.length === POSE_SEQUENCE_NAMES.length}
+                  onChange={(e) => setOptions({
+                    ...options,
+                    selectedPoses: e.target.checked ? [...POSE_SEQUENCE_NAMES] : [],
+                  })}
+                />
+                All
+              </label>
+              {POSE_SEQUENCE_NAMES.map((name) => {
+                const checked = options.selectedPoses.includes(name);
+                return (
+                  <label key={name} className="pose-preset-label">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...options.selectedPoses, name]
+                          : options.selectedPoses.filter((n) => n !== name);
+                        setOptions({ ...options, selectedPoses: next });
+                      }}
+                    />
+                    {name}
+                  </label>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
 
         <div className="modal-footer">
