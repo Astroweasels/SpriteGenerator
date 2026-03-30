@@ -335,12 +335,14 @@ function generateAbstractBody(size: number, complexity: string): boolean[][] {
 const EYE_WHITE: Color = { r: 255, g: 255, b: 255, a: 255 };
 const EYE_PUPIL: Color = { r: 20, g: 20, b: 30, a: 255 };
 
-/** Stamp eyes onto the pixel map after coloring. Works for humanoid/mech/creature. */
+/** Stamp eyes onto the pixel map after coloring. Works for humanoid/mech/creature.
+ *  headDy shifts the eyes vertically to follow head movement in poses. */
 function addEyes(
   pixels: Map<string, Color>,
   size: number,
   style: string,
-  symmetrical: boolean
+  symmetrical: boolean,
+  headDy = 0,
 ): void {
   const cx = Math.floor(size / 2);
 
@@ -353,7 +355,7 @@ function addEyes(
     // Eyes sit in the lower-middle of the head (face/skin area)
     const headTop = Math.floor(size * 0.05);
     const headBot = Math.floor(size * 0.25);
-    eyeY = Math.floor(headTop + (headBot - headTop) * 0.65); // 65% down the head = face zone
+    eyeY = Math.floor(headTop + (headBot - headTop) * 0.65) + headDy;
     eyeOffset = Math.max(1, Math.floor(size * 0.06));
     eyeRadius = Math.max(0, Math.floor(size * 0.025));
   } else if (style === 'creature') {
@@ -579,9 +581,25 @@ function getPoseOffsets(poseIndex: number, size: number, style: string) {
       { region: 'leftArm' as const, offsetX: -s * 3, offsetY: -s },
       { region: 'torso' as const, offsetX: -s, offsetY: 0 },
     ],
+    // Breathe (shoulders/torso shift up slightly)
+    [
+      { region: 'torso' as const, offsetX: 0, offsetY: -1 },
+      { region: 'head' as const, offsetX: 0, offsetY: -1 },
+      { region: 'leftArm' as const, offsetX: 0, offsetY: -1 },
+      { region: 'rightArm' as const, offsetX: 0, offsetY: -1 },
+    ],
   ];
 
   return poseLibrary[poseIndex % poseLibrary.length];
+}
+
+/** Get the head Y offset for a given pose so eyes can follow. */
+function getHeadDyForPose(poseIndex: number, size: number, style: string): number {
+  const offsets = getPoseOffsets(poseIndex, size, style);
+  for (const o of offsets) {
+    if (o.region === 'head') return o.offsetY;
+  }
+  return 0;
 }
 
 // ---- Main generation function ----
@@ -589,8 +607,8 @@ function getPoseOffsets(poseIndex: number, size: number, style: string) {
 /** Pose library indices and their sequence grouping */
 const POSE_SEQUENCES: { name: string; poseIndices: number[] }[] = [
   // index 0 = idle (no transform), 1 = walk1, 2 = walk2,
-  // 3 = arms up, 4 = crouch, 5 = jump, 6 = attack R, 7 = attack L
-  { name: 'Idle',    poseIndices: [0] },
+  // 3 = arms up, 4 = crouch, 5 = jump, 6 = attack R, 7 = attack L, 8 = breathe
+  { name: 'Idle',    poseIndices: [0, 8, 0, 8] },        // idle→breathe→idle→breathe
   { name: 'Walk',    poseIndices: [0, 1, 0, 2] },       // idle→walk1→idle→walk2
   { name: 'Jump',    poseIndices: [4, 5, 0] },           // crouch→jump→land (idle)
   { name: 'Attack',  poseIndices: [0, 6, 7, 0] },       // idle→swing R→swing L→idle
@@ -606,8 +624,9 @@ function makeFrame(
   const px = poseIndex === 0
     ? new Map(basePixels)
     : applyPoseToPixels(basePixels, size, poseIndex, style);
-  // Eyes on every frame
-  addEyes(px, size, style, true);
+  // Eyes follow the head offset for the current pose
+  const headDy = getHeadDyForPose(poseIndex, size, style);
+  addEyes(px, size, style, true, headDy);
   const layer = createLayer('Generated');
   layer.pixels = px;
   return {
