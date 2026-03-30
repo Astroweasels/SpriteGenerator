@@ -350,10 +350,10 @@ function addEyes(
   let eyeRadius: number;
 
   if (style === 'humanoid' || style === 'mech') {
-    // Eyes sit in the upper part of the head
+    // Eyes sit in the lower-middle of the head (face/skin area)
     const headTop = Math.floor(size * 0.05);
     const headBot = Math.floor(size * 0.25);
-    eyeY = Math.floor((headTop + headBot) * 0.55); // slightly above center of head
+    eyeY = Math.floor(headTop + (headBot - headTop) * 0.65); // 65% down the head = face zone
     eyeOffset = Math.max(1, Math.floor(size * 0.06));
     eyeRadius = Math.max(0, Math.floor(size * 0.025));
   } else if (style === 'creature') {

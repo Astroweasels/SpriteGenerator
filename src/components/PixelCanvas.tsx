@@ -101,8 +101,8 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
 
     // Grid
     if (gridVisible && pixelSize >= 4) {
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = 1;
       for (let x = 0; x <= width; x++) {
         ctx.beginPath();
         ctx.moveTo(x * pixelSize, 0);
