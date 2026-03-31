@@ -88,7 +88,7 @@
 
 .style-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
 }
 
@@ -209,6 +209,17 @@ select:focus {
   box-shadow: 0 4px 12px rgba(51, 85, 170, 0.4);
 }
 
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-primary:disabled:hover {
+  background: linear-gradient(135deg, #3355aa, #5577cc);
+  box-shadow: none;
+}
+
 .btn-secondary {
   padding: 10px 20px;
   border: 1px solid #333355;
@@ -327,4 +338,48 @@ select:focus {
   width: 15px;
   height: 15px;
   accent-color: #5577cc;
+}
+
+/* Object variant picker */
+.object-variant-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.object-variant-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 2px solid #333355;
+  border-radius: 8px;
+  background: #1a1a2e;
+  color: #aaaacc;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+
+.object-variant-btn:hover {
+  border-color: #5555aa;
+  background: #222244;
+}
+
+.object-variant-btn.active {
+  border-color: #44aa55;
+  background: rgba(68, 170, 85, 0.15);
+  color: #e0ffe0;
+  box-shadow: 0 0 10px rgba(68, 170, 85, 0.25);
+}
+
+.object-variant-icon {
+  font-size: 22px;
+}
+
+.object-variant-name {
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
 }

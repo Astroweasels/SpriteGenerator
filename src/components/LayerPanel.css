@@ -132,3 +132,61 @@
   background: #442222;
   color: #ff6666;
 }
+
+/* Layer info button & tooltip */
+.layer-info-btn {
+  background: none;
+  border: none;
+  color: #6666aa;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 0 0 6px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.layer-info-btn:hover {
+  color: #88aaff;
+}
+
+.layer-info-box {
+  background: #0f0f23;
+  border: 1px solid #333355;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #a0a0cc;
+  line-height: 1.5;
+}
+
+.layer-info-box p {
+  margin: 0 0 8px 0;
+}
+
+.layer-info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.layer-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.layer-info-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid #1a1a3e;
+  font-size: 12px;
+}
+
+.layer-info-table td:first-child {
+  width: 40px;
+  text-align: center;
+  color: #88aaff;
+}
+
+.layer-info-tip {
+  font-size: 11px;
+  color: #666688;
+  font-style: italic;
+}

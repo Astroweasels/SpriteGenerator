@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Layer } from '../types';
 import './LayerPanel.css';
 
@@ -31,14 +31,46 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   onMergeDown,
   onClearLayer,
 }) => {
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
     <div className="layer-panel">
       <div className="layer-panel-header">
-        <span className="panel-title">Layers</span>
+        <span className="panel-title">
+          Layers
+          <button
+            className="layer-info-btn"
+            onClick={() => setShowInfo(!showInfo)}
+            title="What are layers?"
+          >
+            ⓘ
+          </button>
+        </span>
         <button className="layer-add-btn" onClick={onAddLayer} title="Add Layer">
           + Add
         </button>
       </div>
+
+      {showInfo && (
+        <div className="layer-info-box">
+          <p>
+            <strong>Layers</strong> are like transparent sheets stacked on top of each other.
+            Draw different parts on separate layers and edit each one without affecting the rest.
+          </p>
+          <table className="layer-info-table">
+            <tbody>
+              <tr><td>👁️</td><td>Toggle layer visibility on/off</td></tr>
+              <tr><td>Slider</td><td>Adjust layer opacity (transparency)</td></tr>
+              <tr><td>↑ ↓</td><td>Move layer up or down in the stack</td></tr>
+              <tr><td>⧉</td><td>Duplicate the layer</td></tr>
+              <tr><td>⤓</td><td>Merge this layer into the one below</td></tr>
+              <tr><td>🗑️</td><td>Clear all pixels on this layer</td></tr>
+              <tr><td>✕</td><td>Delete the layer</td></tr>
+            </tbody>
+          </table>
+          <p className="layer-info-tip">Layers higher in the list are drawn on top. You can ignore layers entirely — everything works fine on the default layer.</p>
+        </div>
+      )}
 
       <div className="layer-list">
         {[...layers].reverse().map((layer, reversedIndex) => {

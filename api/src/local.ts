@@ -1,22 +1,65 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import { handler } from './handler.js';
 
 const PORT = Number(process.env.PORT) || 3001;
+
+const SWAGGER_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AstroSprite API – Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({ url: '/openapi.yaml', dom_id: '#swagger-ui', deepLinking: true });
+  </script>
+</body>
+</html>`;
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
     });
     res.end();
     return;
   }
 
-  if (req.method !== 'POST' || req.url !== '/generate') {
+  // Swagger UI
+  if (req.method === 'GET' && (req.url === '/docs' || req.url === '/docs/')) {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(SWAGGER_HTML);
+    return;
+  }
+
+  // Serve OpenAPI spec
+  if (req.method === 'GET' && req.url === '/openapi.yaml') {
+    const specPath = path.resolve(import.meta.dirname ?? '.', '..', 'openapi.yaml');
+    try {
+      const spec = fs.readFileSync(specPath, 'utf-8');
+      res.writeHead(200, {
+        'Content-Type': 'text/yaml',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(spec);
+    } catch {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'openapi.yaml not found' }));
+    }
+    return;
+  }
+
+  const validPostPaths = ['/generate', '/draw', '/import', '/export', '/layers', '/frames', '/resize'];
+  if (req.method !== 'POST' || !validPostPaths.includes(req.url ?? '')) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not found. POST to /generate' }));
+    res.end(JSON.stringify({ error: `Not found. POST to: ${validPostPaths.join(', ')}  |  GET /docs for Swagger UI` }));
     return;
   }
 
@@ -28,7 +71,8 @@ const server = http.createServer(async (req, res) => {
 
   const result = await handler({
     body,
-    requestContext: { http: { method: 'POST' } },
+    requestContext: { http: { method: 'POST', path: req.url } },
+    rawPath: req.url,
   } as any);
 
   const statusCode = typeof result === 'object' && 'statusCode' in result ? result.statusCode ?? 200 : 200;
@@ -40,6 +84,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`SpriteForge API running locally at http://localhost:${PORT}`);
-  console.log(`POST http://localhost:${PORT}/generate`);
+  console.log(`AstroSprite API running locally at http://localhost:${PORT}`);
+  console.log(`POST endpoints: /generate /draw /import /export /layers /frames /resize`);
+  console.log(`Swagger UI: http://localhost:${PORT}/docs`);
 });

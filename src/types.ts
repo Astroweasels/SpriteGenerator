@@ -67,11 +67,12 @@ export interface PoseTransform {
 }
 
 export interface RandomGenOptions {
-  style: 'humanoid' | 'creature' | 'mech' | 'abstract';
+  style: 'humanoid' | 'creature' | 'mech' | 'abstract' | 'object';
   size: number;
   symmetrical: boolean;
   colorScheme: 'random' | 'warm' | 'cool' | 'monochrome' | 'complementary' | 'earth' | 'neon' | 'pastel';
   complexity: 'simple' | 'medium' | 'complex';
   selectedPoses: string[];
   template?: string;
+  objectVariant?: number;
 }

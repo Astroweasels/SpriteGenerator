@@ -1,0 +1,81 @@
+.music-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.music-toggle {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #3a3a5e;
+  background: #1a1a2e;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.music-toggle:hover {
+  background: #2a2a4e;
+}
+
+.music-toggle.playing {
+  border-color: #7c7cff;
+  background: #1e1e44;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(124, 124, 255, 0.2); }
+  50% { box-shadow: 0 0 10px rgba(124, 124, 255, 0.4); }
+}
+
+.music-volume {
+  width: 70px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #2a2a4e;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.music-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #7c7cff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.music-volume::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #7c7cff;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.music-tune {
+  padding: 4px 8px;
+  border: 1px solid #3a3a5e;
+  background: #1a1a2e;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #b0b0d0;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.music-tune:hover {
+  background: #2a2a4e;
+  border-color: #7c7cff;
+  color: #e0e0ff;
+}

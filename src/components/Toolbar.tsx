@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Tool } from '../types';
+import { MusicPlayer } from './MusicPlayer';
 import './Toolbar.css';
 
 interface ToolbarProps {
@@ -13,6 +14,11 @@ interface ToolbarProps {
   onToggleGrid: () => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  brushSize: number;
+  onBrushSizeChange: (size: number) => void;
+  canvasWidth: number;
+  canvasHeight: number;
+  onCanvasResize: (w: number, h: number) => void;
 }
 
 const TOOLS: { tool: Tool; label: string; icon: string; shortcut: string }[] = [
@@ -36,7 +42,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onToggleGrid,
   zoom,
   onZoomChange,
+  brushSize,
+  onBrushSizeChange,
+  canvasWidth,
+  canvasHeight,
+  onCanvasResize,
 }) => {
+  const showBrushSize = currentTool === 'pencil' || currentTool === 'eraser';
+
   return (
     <div className="toolbar">
       <div className="toolbar-section">
@@ -55,6 +68,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           ))}
         </div>
       </div>
+
+      {showBrushSize && (
+        <>
+          <div className="toolbar-divider" />
+          <div className="toolbar-section">
+            <span className="toolbar-label">Brush</span>
+            <div className="brush-size-control">
+              {[1, 2, 3, 4, 5].map((size) => (
+                <button
+                  key={size}
+                  className={`brush-size-btn ${brushSize === size ? 'active' : ''}`}
+                  onClick={() => onBrushSizeChange(size)}
+                  title={`${size}×${size} brush`}
+                >
+                  <span
+                    className="brush-size-dot"
+                    style={{ width: 4 + size * 3, height: 4 + size * 3 }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="toolbar-divider" />
 
@@ -84,10 +121,34 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
           <div className="zoom-control">
             <button className="zoom-btn" onClick={() => onZoomChange(Math.max(2, zoom - 2))}>−</button>
-            <span className="zoom-label">{zoom}x</span>
+            <span className="zoom-label">🔍 {zoom}x</span>
             <button className="zoom-btn" onClick={() => onZoomChange(Math.min(32, zoom + 2))}>+</button>
           </div>
         </div>
+      </div>
+
+      <div className="toolbar-divider" />
+
+      <div className="toolbar-section">
+        <span className="toolbar-label">Canvas</span>
+        <div className="canvas-size-control">
+          <span className="canvas-dim-label">W</span>
+          <button className="canvas-dim-btn" onClick={() => onCanvasResize(Math.max(8, canvasWidth - 8), canvasHeight)}>−</button>
+          <span className="canvas-dim-value">{canvasWidth}</span>
+          <button className="canvas-dim-btn" onClick={() => onCanvasResize(Math.min(128, canvasWidth + 8), canvasHeight)}>+</button>
+          <span className="canvas-size-x">×</span>
+          <span className="canvas-dim-label">H</span>
+          <button className="canvas-dim-btn" onClick={() => onCanvasResize(canvasWidth, Math.max(8, canvasHeight - 8))}>−</button>
+          <span className="canvas-dim-value">{canvasHeight}</span>
+          <button className="canvas-dim-btn" onClick={() => onCanvasResize(canvasWidth, Math.min(128, canvasHeight + 8))}>+</button>
+        </div>
+      </div>
+
+      <div className="toolbar-divider" />
+
+      <div className="toolbar-section">
+        <span className="toolbar-label">Music</span>
+        <MusicPlayer />
       </div>
     </div>
   );

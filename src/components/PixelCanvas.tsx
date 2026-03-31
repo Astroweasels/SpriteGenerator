@@ -20,6 +20,10 @@ interface PixelCanvasProps {
   currentTool: Tool;
   gridVisible: boolean;
   zoom: number;
+  brushSize: number;
+  colorCycleEnabled: boolean;
+  colorCycleColors: Color[];
+  onZoomChange: (zoom: number) => void;
   onPixelsChanged: (layerId: string, pixels: Map<string, Color>) => void;
   onColorPicked?: (color: Color) => void;
   onSaveUndo?: () => void;
@@ -36,6 +40,10 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
   currentTool,
   gridVisible,
   zoom,
+  brushSize,
+  colorCycleEnabled,
+  colorCycleColors,
+  onZoomChange,
   onPixelsChanged,
   onColorPicked,
   onSaveUndo,
@@ -44,6 +52,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState<[number, number] | null>(null);
   const [previewPixels, setPreviewPixels] = useState<[number, number][]>([]);
+  const colorCycleIndexRef = useRef(0);
 
   const pixelSize = zoom;
   const canvasWidth = width * pixelSize;
@@ -122,6 +131,15 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     draw();
   }, [draw]);
 
+  const getDrawColor = useCallback((): Color => {
+    if (colorCycleEnabled && colorCycleColors.length > 0) {
+      const color = colorCycleColors[colorCycleIndexRef.current % colorCycleColors.length];
+      colorCycleIndexRef.current = (colorCycleIndexRef.current + 1) % colorCycleColors.length;
+      return color;
+    }
+    return currentColor;
+  }, [colorCycleEnabled, colorCycleColors, currentColor]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!activeLayer) return;
     const [x, y] = getPixelCoords(e);
@@ -131,13 +149,30 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     switch (currentTool) {
       case 'pencil': {
         const newPixels = new Map(activeLayer.pixels);
-        newPixels.set(pixelKey(x, y), currentColor);
+        const drawColor = getDrawColor();
+        const half = Math.floor(brushSize / 2);
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            const px = x + dx, py = y + dy;
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+              newPixels.set(pixelKey(px, py), drawColor);
+            }
+          }
+        }
         onPixelsChanged(activeLayer.id, newPixels);
         break;
       }
       case 'eraser': {
         const newPixels = new Map(activeLayer.pixels);
-        newPixels.delete(pixelKey(x, y));
+        const half = Math.floor(brushSize / 2);
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            const px = x + dx, py = y + dy;
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+              newPixels.delete(pixelKey(px, py));
+            }
+          }
+        }
         onPixelsChanged(activeLayer.id, newPixels);
         break;
       }
@@ -167,13 +202,30 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     switch (currentTool) {
       case 'pencil': {
         const newPixels = new Map(activeLayer.pixels);
-        newPixels.set(pixelKey(x, y), currentColor);
+        const drawColor = getDrawColor();
+        const half = Math.floor(brushSize / 2);
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            const px = x + dx, py = y + dy;
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+              newPixels.set(pixelKey(px, py), drawColor);
+            }
+          }
+        }
         onPixelsChanged(activeLayer.id, newPixels);
         break;
       }
       case 'eraser': {
         const newPixels = new Map(activeLayer.pixels);
-        newPixels.delete(pixelKey(x, y));
+        const half = Math.floor(brushSize / 2);
+        for (let dy = -half; dy <= half; dy++) {
+          for (let dx = -half; dx <= half; dx++) {
+            const px = x + dx, py = y + dy;
+            if (px >= 0 && px < width && py >= 0 && py < height) {
+              newPixels.delete(pixelKey(px, py));
+            }
+          }
+        }
         onPixelsChanged(activeLayer.id, newPixels);
         break;
       }
@@ -238,6 +290,16 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     setPreviewPixels([]);
   };
 
+  const handleWheel = useCallback(
+    (e: React.WheelEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 2 : -2;
+      const next = Math.max(2, Math.min(32, zoom + delta));
+      if (next !== zoom) onZoomChange(next);
+    },
+    [zoom, onZoomChange]
+  );
+
   return (
     <div className="pixel-canvas-wrapper">
       <canvas
@@ -248,6 +310,7 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
         onMouseLeave={() => {
           setIsDrawing(false);
           setStartPos(null);

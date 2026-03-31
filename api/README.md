@@ -1,6 +1,6 @@
-# SpriteForge API
+# AstroSprite API
 
-Headless sprite generation service for AI agents and automated pipelines. Generates pixel art characters and sprite sheets via a single REST endpoint.
+Headless sprite generation service for AI agents and automated pipelines. Generates pixel art characters with weapons, per-region color control, and named animation sequences via a single REST endpoint.
 
 ## Quick Start (Local)
 
@@ -11,27 +11,101 @@ npm run build
 npm start
 ```
 
-The API runs at `http://localhost:3001`. No AWS account needed for local use.
+The API runs at `http://localhost:3001`. Open `http://localhost:3001/docs` for interactive Swagger UI.
 
-## Endpoint
+## Endpoints
 
-### `POST /generate`
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/generate` | Generate a sprite |
+| GET | `/docs` | Swagger UI (local only) |
+| GET | `/openapi.yaml` | Raw OpenAPI 3.1 spec |
 
-Generate a random pixel art sprite with optional animation poses.
+---
 
-#### Request Body
+## `POST /generate`
+
+### Request Fields
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `style` | string | **yes** | — | `humanoid`, `creature`, `mech`, or `abstract` |
-| `size` | integer | **yes** | — | Sprite dimensions in pixels (8–128, square) |
+| `style` | string | **yes** | — | `humanoid`, `creature`, `mech`, `abstract`, or `object` |
+| `size` | integer | **yes** | — | Frame size in pixels (8–128, always square) |
 | `symmetrical` | boolean | no | `true` | Mirror the sprite horizontally |
-| `colorScheme` | string | no | `random` | `random`, `warm`, `cool`, `monochrome`, `complementary`, `earth`, `neon`, `pastel` |
-| `complexity` | string | no | `medium` | `simple`, `medium`, `complex` |
-| `generatePoses` | boolean | no | `false` | Generate animation pose frames |
-| `poseCount` | integer | no | `0` | Number of poses (0–7): Walk 1, Walk 2, Arms Up, Crouch, Jump, Attack R, Attack L |
+| `colorScheme` | string | no | `random` | Palette strategy: `random`, `warm`, `cool`, `monochrome`, `complementary`, `earth`, `neon`, `pastel` |
+| `complexity` | string | no | `medium` | `simple` (4 colors), `medium` (6), `complex` (8) |
+| `template` | string | no | — | Character preset (see Templates below) |
+| `weapon` | string | no | — | `sword`, `dagger`, `bow`, `staff`, or `none` |
+| `colorOverrides` | object | no | — | Per-region color control (see Color Overrides below) |
+| `selectedSequences` | string[] | no | — | Named animation sequences to generate |
 
-#### Example Request
+### Templates
+
+Applying a template sets themed region colors and a default weapon. Color overrides still take priority.
+
+| Template | Default Weapon | Style |
+|----------|---------------|-------|
+| `adventurer` | sword | Green-clad explorer |
+| `knight` | sword | Silver-armored warrior |
+| `mage` | staff | Blue-robed spellcaster |
+| `rogue` | dagger | Dark-cloaked thief |
+| `warrior` | sword | Red battle-scarred fighter |
+| `ranger` | bow | Brown-cloaked archer |
+| `paladin` | sword | Gold-plated holy knight |
+| `necromancer` | staff | Dark-robed dark mage |
+| `pirate` | sword | Weathered sea raider |
+| `robot` | none | Chrome/neon mechanical |
+
+### Animation Sequences
+
+Use `selectedSequences` to pick which animations to generate:
+
+| Sequence | Frames | Description |
+|----------|--------|-------------|
+| `Idle` | 2 | Breathing / weight shift |
+| `Walk` | 4 | Walk cycle |
+| `Jump` | 3 | Crouch → jump → land |
+| `Attack Slash` | 3 | Wind-up → horizontal slash → follow-through |
+| `Attack Thrust` | 3 | Wind-up → forward thrust → recover |
+| `Attack Overhead` | 3 | Raise → overhead slam → recover |
+
+### Color Overrides
+
+Override individual body regions to match a character description. Each palette region accepts 1–3 RGB values (dark → medium → light gradient). The `outline` region is a single color.
+
+```json
+{
+  "colorOverrides": {
+    "hair":   [{"r":60,"g":30,"b":10}, {"r":120,"g":60,"b":30}],
+    "skin":   [{"r":180,"g":140,"b":100}, {"r":220,"g":180,"b":140}],
+    "tunic":  [{"r":20,"g":40,"b":100}, {"r":40,"g":80,"b":160}, {"r":80,"g":120,"b":200}],
+    "arms":   [{"r":40,"g":40,"b":40}, {"r":80,"g":80,"b":80}],
+    "legs":   [{"r":50,"g":30,"b":20}, {"r":90,"g":60,"b":40}],
+    "feet":   [{"r":40,"g":30,"b":20}, {"r":70,"g":50,"b":30}],
+    "accent": [{"r":200,"g":180,"b":40}, {"r":240,"g":220,"b":80}],
+    "outline": {"r":20,"g":10,"b":5}
+  }
+}
+```
+
+**Region map (humanoid):**
+
+| Region | Body area |
+|--------|-----------|
+| `hair` | Top-of-head pixels |
+| `skin` | Face and exposed skin |
+| `tunic` | Main chest / torso armor |
+| `arms` | Sleeves / arm guards |
+| `legs` | Trousers / leg armor |
+| `feet` | Boots / shoes |
+| `accent` | Belt, trim, decorations |
+| `outline` | Single outline color |
+
+---
+
+## Example Requests
+
+### Purple-robed mage with staff
 
 ```bash
 curl -X POST http://localhost:3001/generate \
@@ -40,14 +114,44 @@ curl -X POST http://localhost:3001/generate \
     "style": "humanoid",
     "size": 32,
     "symmetrical": true,
-    "colorScheme": "cool",
     "complexity": "medium",
-    "generatePoses": true,
-    "poseCount": 4
+    "template": "mage",
+    "weapon": "staff",
+    "selectedSequences": ["Idle", "Walk", "Attack Slash"],
+    "colorOverrides": {
+      "tunic": [{"r":60,"g":20,"b":90}, {"r":100,"g":40,"b":140}, {"r":160,"g":80,"b":200}],
+      "hair": [{"r":200,"g":200,"b":220}, {"r":240,"g":240,"b":255}],
+      "accent": [{"r":200,"g":180,"b":40}, {"r":240,"g":220,"b":80}],
+      "outline": {"r":30,"g":10,"b":50}
+    }
   }'
 ```
 
-#### Response
+### Quick knight with all animations
+
+```bash
+curl -X POST http://localhost:3001/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "style": "humanoid",
+    "size": 32,
+    "template": "knight",
+    "weapon": "sword",
+    "selectedSequences": ["Idle","Walk","Jump","Attack Slash","Attack Thrust","Attack Overhead"]
+  }'
+```
+
+### Simple creature — no template
+
+```bash
+curl -X POST http://localhost:3001/generate \
+  -H "Content-Type: application/json" \
+  -d '{"style":"creature","size":32,"colorScheme":"neon","complexity":"complex"}'
+```
+
+---
+
+## Response Format
 
 ```json
 {
@@ -55,39 +159,90 @@ curl -X POST http://localhost:3001/generate \
   "spriteSheet": {
     "width": 32,
     "height": 32,
-    "frameCount": 5,
-    "frameNames": ["Idle", "Walk 1", "Walk 2", "Arms Up", "Crouch"]
+    "frameCount": 8,
+    "frameNames": ["Idle 1","Idle 2","Walk 1","Walk 2","Walk 3","Walk 4","Attack Slash 1","Attack Slash 2"],
+    "sequences": [
+      { "name": "Idle", "frameIndices": [0, 1] },
+      { "name": "Walk", "frameIndices": [2, 3, 4, 5] },
+      { "name": "Attack Slash", "frameIndices": [6, 7] }
+    ]
   },
   "frames": [
-    "data:image/png;base64,iVBORw0KGgo...",
     "data:image/png;base64,iVBORw0KGgo...",
     "..."
   ],
   "sheet": "data:image/png;base64,iVBORw0KGgo...",
-  "sheetUrl": "https://spriteforge-sprites-123456.s3.amazonaws.com/sprites/abc.png?..."
+  "sheetUrl": "https://spriteforge-sprites.s3.amazonaws.com/sprites/abc.png?..."
 }
 ```
 
-- **`frames`**: Individual animation frame PNGs as base64 data URIs. Decode and save directly.
-- **`sheet`**: All frames combined into a horizontal sprite sheet (data URI).
-- **`sheetUrl`**: Pre-signed S3 download link, expires in 15 minutes. Only present when deployed to AWS with S3 configured.
+- **`frames`**: Each animation frame as a base64 PNG data URI.
+- **`sheet`**: All frames in a horizontal strip (data URI).
+- **`sequences`**: Maps animation names to indices in the `frames` array. Use this to split frames into individual animations in your game engine.
+- **`sheetUrl`**: Pre-signed S3 URL (15 min expiry). Only present when deployed to AWS with S3 configured.
 
-#### Using the Response
+### Saving frames (Node.js)
 
-**Save a frame to a file (Node.js):**
 ```js
 const base64 = response.frames[0].replace('data:image/png;base64,', '');
-fs.writeFileSync('idle.png', Buffer.from(base64, 'base64'));
+fs.writeFileSync('idle_1.png', Buffer.from(base64, 'base64'));
 ```
 
-**Download from S3 URL:**
-```bash
-curl -o spritesheet.png "SHEET_URL_HERE"
+### Using in a game engine
+
+1. Save each sequence as separate PNGs or a single strip
+2. The `sequences` array tells you which frames belong to which animation
+3. Import into Godot (`AnimatedSprite2D`), Unity (`Animation Clips`), etc.
+
+---
+
+## For AI Agent Integration
+
+An AI agent can call this API as a tool to translate natural language character descriptions into pixel art assets.
+
+### Recommended tool definition
+
+```
+Tool: generate_sprite
+Description: Generate pixel art character sprites with animations for a 2D game.
+  Supports 10 character archetypes, 4 weapon types, 6 animation sequences,
+  and per-region color customization.
+Endpoint: POST /generate
+Parameters: style, size, template, weapon, selectedSequences, colorOverrides, complexity, symmetrical, colorScheme
+Returns: Base64 PNG frames, sprite sheet, and animation sequence metadata
 ```
 
-**Use in Godot:**
-1. Save the PNG file(s) to your project's `res://assets/` folder
-2. Load as `Texture2D` or split the sprite sheet using `AtlasTexture`
+### How an AI agent should use this
+
+1. **Parse the user's description** → Extract character type, colors, weapon, desired animations
+2. **Pick a template** matching the archetype (e.g. "dark wizard" → `necromancer`)
+3. **Map described colors to regions** (e.g. "red cloak" → `tunic: [{r:120,g:20,b:20},{r:180,g:40,b:40}]`)
+4. **Choose sequences** based on actions needed (e.g. "walking and attacking" → `["Walk","Attack Slash"]`)
+5. **POST to `/generate`** with the assembled request body
+6. **Save the base64 frames** as PNG files for the user
+
+### Example: "Create a fire mage with orange robes"
+
+The agent would translate this to:
+```json
+{
+  "style": "humanoid",
+  "size": 32,
+  "template": "mage",
+  "weapon": "staff",
+  "selectedSequences": ["Idle", "Walk", "Attack Slash"],
+  "colorOverrides": {
+    "tunic": [{"r":140,"g":40,"b":10}, {"r":200,"g":80,"b":20}, {"r":240,"g":140,"b":40}],
+    "accent": [{"r":200,"g":160,"b":20}, {"r":240,"g":200,"b":60}]
+  }
+}
+```
+
+### OpenAPI Spec
+
+The full spec is at [`openapi.yaml`](./openapi.yaml). Feed it to any OpenAPI-compatible tool loader (LangChain, CrewAI, OpenAI function calling, etc.) to auto-generate the tool schema.
+
+---
 
 ## Deployment to AWS
 
@@ -108,50 +263,20 @@ sam build
 sam deploy --guided
 ```
 
-SAM will prompt you for stack name, region, etc. After deployment, it outputs the API URL.
-
-### Infrastructure Created
+### Infrastructure Cost
 
 | Resource | Purpose | Cost |
 |----------|---------|------|
 | Lambda Function | Runs sprite generation | Free tier: 1M requests/mo |
-| API Gateway (HTTP) | Routes requests, rate limiting | Free tier: 1M requests/mo |
+| API Gateway (HTTP) | Routes & rate limiting | Free tier: 1M requests/mo |
 | S3 Bucket | Temporary PNG storage | ~$0.023/GB, auto-deletes after 24h |
 
-**Estimated monthly cost for moderate use (10K generations): under $5, likely free tier.**
+**Estimated: under $5/mo for 10K generations, likely free tier.**
 
 ## Security
 
-- **Rate limiting** is configured in the SAM template (default: 10 req/sec, 20 burst)
-- **Input validation** caps size at 128×128 and poses at 7
-- **S3 objects auto-delete** after 24 hours via lifecycle policy
-- **S3 bucket blocks all public access** — files are only reachable via time-limited pre-signed URLs
-- **CORS** is configured to allow cross-origin requests
-
-### Adding API Key Protection
-
-API Gateway v2 (HTTP API) doesn't natively support API keys. To add authentication:
-
-1. **Lambda Authorizer** — add a simple token check (recommended, see AWS docs)
-2. **Migrate to REST API** (v1) — supports native API key + usage plan throttling
-3. **Cognito** — full OAuth2 flow (overkill for agent use)
-
-## OpenAPI Spec
-
-The full OpenAPI 3.1 specification is at [`openapi.yaml`](./openapi.yaml). AI agents can use this spec to discover and call the API automatically.
-
-## For AI Agent Integration (MCP / Tool Use)
-
-An AI agent can call this API as an external tool. Provide the agent with:
-
-1. The API URL
-2. The OpenAPI spec (or describe the endpoint in the tool definition)
-3. Instructions to save the base64 frames as PNG files
-
-Example tool definition for an AI agent:
-```
-Tool: generate_sprite
-Description: Generate pixel art sprite assets for a 2D game
-Parameters: style, size, colorScheme, complexity, symmetrical, generatePoses, poseCount
-Returns: PNG images as base64 data URIs and a sprite sheet download URL
-```
+- Rate limiting via SAM template (10 req/sec, 20 burst)
+- Input validation: size capped at 128×128, RGB values clamped 0–255
+- S3 lifecycle auto-deletes after 24 hours
+- S3 blocks all public access — files only via pre-signed URLs
+- CORS enabled for cross-origin requests

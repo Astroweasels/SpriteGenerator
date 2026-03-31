@@ -6,6 +6,10 @@ import './ColorPalette.css';
 interface ColorPaletteProps {
   currentColor: Color;
   onColorChange: (color: Color) => void;
+  colorCycleEnabled: boolean;
+  onColorCycleEnabledChange: (enabled: boolean) => void;
+  colorCycleColors: Color[];
+  onColorCycleColorsChange: (colors: Color[]) => void;
 }
 
 // Comprehensive color palette for pixel art / 2D game sprites
@@ -50,6 +54,10 @@ const DEFAULT_PALETTE: string[] = [
 export const ColorPalette: React.FC<ColorPaletteProps> = ({
   currentColor,
   onColorChange,
+  colorCycleEnabled,
+  onColorCycleEnabledChange,
+  colorCycleColors,
+  onColorCycleColorsChange,
 }) => {
   const [customColors, setCustomColors] = useState<string[]>([]);
   const currentHex = colorToHex(currentColor);
@@ -97,6 +105,47 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
           />
           <span className="alpha-value">{currentColor.a}</span>
         </div>
+      </div>
+
+      <div className="color-cycle-section">
+        <div className="color-cycle-header">
+          <span className="color-cycle-label">🎨 Color Cycle</span>
+          <button
+            className={`color-cycle-toggle ${colorCycleEnabled ? 'active' : ''}`}
+            onClick={() => onColorCycleEnabledChange(!colorCycleEnabled)}
+            title={colorCycleEnabled ? 'Disable color cycling' : 'Enable color cycling'}
+          >
+            {colorCycleEnabled ? 'ON' : 'OFF'}
+          </button>
+        </div>
+        <div className="color-cycle-slots">
+          {colorCycleColors.map((c, i) => (
+            <button
+              key={i}
+              className="color-cycle-slot"
+              style={{ backgroundColor: colorToHex(c) }}
+              onClick={() => onColorCycleColorsChange(colorCycleColors.filter((_, j) => j !== i))}
+              title={`${colorToHex(c)} — click to remove`}
+            />
+          ))}
+          {colorCycleColors.length < 7 && (
+            <button
+              className="color-cycle-slot add-slot"
+              onClick={() => onColorCycleColorsChange([...colorCycleColors, currentColor])}
+              title="Add current color to cycle"
+            >
+              +
+            </button>
+          )}
+        </div>
+        {colorCycleColors.length > 0 && (
+          <button
+            className="color-cycle-clear"
+            onClick={() => onColorCycleColorsChange([])}
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <div className="color-grid">

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
 import {
   createSpriteSheet,
@@ -20,6 +20,11 @@ import { FramePanel } from './components/FramePanel';
 import { AnimationPreview } from './components/AnimationPreview';
 import { GenerateModal } from './components/GenerateModal';
 import { ExportModal } from './components/ExportModal';
+import { ApiDocsModal } from './components/ApiDocsModal';
+import { HelpModal } from './components/HelpModal';
+import { AboutModal } from './components/AboutModal';
+import { PresetBar } from './components/PresetBar';
+import { importPng } from './utils/importUtils';
 import './App.css';
 
 function App() {
@@ -30,13 +35,24 @@ function App() {
   const [currentTool, setCurrentTool] = useState<Tool>('pencil');
   const [gridVisible, setGridVisible] = useState(true);
   const [zoom, setZoom] = useState(16);
+  const [brushSize, setBrushSize] = useState(1);
+  const [colorCycleEnabled, setColorCycleEnabled] = useState(false);
+  const [colorCycleColors, setColorCycleColors] = useState<Color[]>([]);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showApiDocs, setShowApiDocs] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newWidth, setNewWidth] = useState(32);
   const [newHeight, setNewHeight] = useState(32);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+  const canvasAreaRef = useRef<HTMLElement>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const dragStartHeightRef = useRef(0);
 
   const activeFrame = spriteSheet.frames[activeFrameIndex];
 
@@ -44,6 +60,52 @@ function App() {
   const effectiveSequenceId = spriteSheet.sequences.find(s => s.id === activeSequenceId)
     ? activeSequenceId
     : spriteSheet.sequences[0]?.id ?? '';
+
+  // ---- Auto-fit zoom to canvas area ----
+  const computeFitZoom = useCallback((w: number, h: number) => {
+    const el = canvasAreaRef.current;
+    if (!el) return Math.max(4, Math.min(16, Math.floor(512 / Math.max(w, h))));
+    // account for padding (16px each side) + border (4px)
+    const availW = el.clientWidth - 36;
+    const availH = el.clientHeight - 36;
+    const fitZoom = Math.floor(Math.min(availW / w, availH / h));
+    return Math.max(2, Math.min(32, fitZoom));
+  }, []);
+
+  // ---- Bottom panel resize drag handlers ----
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    dragStartYRef.current = e.clientY;
+    dragStartHeightRef.current = bottomPanelHeight;
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = dragStartYRef.current - ev.clientY;
+      const newH = Math.max(60, Math.min(500, dragStartHeightRef.current + delta));
+      setBottomPanelHeight(newH);
+    };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+  }, [bottomPanelHeight]);
+
+  // Re-fit zoom when bottom panel height changes
+  useEffect(() => {
+    // small delay so the layout has reflowed
+    const id = setTimeout(() => {
+      setZoom(() => computeFitZoom(spriteSheet.width, spriteSheet.height));
+    }, 50);
+    return () => clearTimeout(id);
+  }, [bottomPanelHeight, computeFitZoom, spriteSheet.width, spriteSheet.height]);
 
   // ---- Undo/Redo ----
   const saveUndo = useCallback(() => {
@@ -330,6 +392,19 @@ function App() {
     }));
   };
 
+  const handleCopyToNewSequence = () => {
+    if (!activeFrame) return;
+    const cloned = cloneFrame(activeFrame);
+    const seq = createSequence(`Custom ${spriteSheet.sequences.length + 1}`, [cloned.id]);
+    setSpriteSheet(ss => ({
+      ...ss,
+      frames: [...ss.frames, cloned],
+      sequences: [...ss.sequences, seq],
+    }));
+    setActiveSequenceId(seq.id);
+    setActiveFrameIndex(spriteSheet.frames.length);
+  };
+
   // ---- Generation ----
   const handleGenerate = (options: RandomGenOptions) => {
     const generated = generateRandomSprite(options);
@@ -339,7 +414,8 @@ function App() {
     setUndoStack([]);
     setRedoStack([]);
     setShowGenerateModal(false);
-    setZoom(Math.max(4, Math.min(16, Math.floor(512 / options.size))));
+    // auto-fit after a tick so the layout has settled
+    requestAnimationFrame(() => setZoom(computeFitZoom(options.size, options.size)));
   };
 
   // ---- New canvas ----
@@ -351,29 +427,88 @@ function App() {
     setUndoStack([]);
     setRedoStack([]);
     setShowNewDialog(false);
-    setZoom(Math.max(4, Math.min(16, Math.floor(512 / Math.max(newWidth, newHeight)))));
+    requestAnimationFrame(() => setZoom(computeFitZoom(newWidth, newHeight)));
+  };
+
+  // ---- Resize canvas (preserves existing pixels) ----
+  const handleCanvasResize = (w: number, h: number) => {
+    setSpriteSheet(prev => ({ ...prev, width: w, height: h }));
+    requestAnimationFrame(() => setZoom(computeFitZoom(w, h)));
+  };
+
+  // ---- PNG Import ----
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleImportPng = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { pixels, width: pw, height: ph } = await importPng(file, 128);
+      saveUndo();
+      // Resize canvas to match image
+      setSpriteSheet(prev => {
+        const frame = prev.frames[activeFrameIndex];
+        if (!frame) return prev;
+        const layer = frame.layers.find(l => l.id === frame.activeLayerId);
+        if (!layer) return prev;
+        return {
+          ...prev,
+          width: pw,
+          height: ph,
+          frames: prev.frames.map((f, i) => {
+            if (i !== activeFrameIndex) return f;
+            return {
+              ...f,
+              layers: f.layers.map(l =>
+                l.id === frame.activeLayerId ? { ...l, pixels } : l
+              ),
+            };
+          }),
+        };
+      });
+      requestAnimationFrame(() => setZoom(computeFitZoom(pw, ph)));
+    } catch {
+      // silently ignore bad files
+    }
+    // Reset input so same file can be re-imported
+    e.target.value = '';
   };
 
   return (
     <div className="app">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png"
+        style={{ display: 'none' }}
+        onChange={handleImportPng}
+      />
       <header className="app-header">
         <div className="header-brand">
           <span className="logo">🎮</span>
-          <h1>SpriteForge</h1>
+          <h1>AstroSprite</h1>
         </div>
         <div className="header-actions">
           <button className="header-btn" onClick={() => setShowNewDialog(true)}>
             📄 New
           </button>
+          <button className="header-btn import-btn" onClick={() => fileInputRef.current?.click()}>
+            📂 Import PNG
+          </button>
           <button className="header-btn generate-btn" onClick={() => setShowGenerateModal(true)}>
-            🎲 Generate Random
+            🎲 Generate Assets
           </button>
           <button className="header-btn export-btn" onClick={() => setShowExportModal(true)}>
             📥 Export
           </button>
-          <span className="canvas-size">
-            {spriteSheet.width}×{spriteSheet.height}
-          </span>
+          <button className="header-btn help-btn" onClick={() => setShowHelp(true)}>
+            ❓ Help
+          </button>
+          <button className="header-btn api-btn" onClick={() => setShowApiDocs(true)}>
+            🔌 API
+          </button>
+          <button className="header-btn about-btn" onClick={() => setShowAbout(true)}>
+            🚀 About
+          </button>
         </div>
       </header>
 
@@ -388,14 +523,28 @@ function App() {
         onToggleGrid={() => setGridVisible(!gridVisible)}
         zoom={zoom}
         onZoomChange={setZoom}
+        brushSize={brushSize}
+        onBrushSizeChange={setBrushSize}
+        canvasWidth={spriteSheet.width}
+        canvasHeight={spriteSheet.height}
+        onCanvasResize={handleCanvasResize}
       />
+
+      <PresetBar onApplyPreset={handleGenerate} />
 
       <div className="app-body">
         <aside className="left-panel">
-          <ColorPalette currentColor={currentColor} onColorChange={setCurrentColor} />
+          <ColorPalette
+            currentColor={currentColor}
+            onColorChange={setCurrentColor}
+            colorCycleEnabled={colorCycleEnabled}
+            onColorCycleEnabledChange={setColorCycleEnabled}
+            colorCycleColors={colorCycleColors}
+            onColorCycleColorsChange={setColorCycleColors}
+          />
         </aside>
 
-        <main className="canvas-area">
+        <main className="canvas-area" ref={canvasAreaRef}>
           {activeFrame && (
             <PixelCanvas
               frame={activeFrame}
@@ -405,6 +554,10 @@ function App() {
               currentTool={currentTool}
               gridVisible={gridVisible}
               zoom={zoom}
+              brushSize={brushSize}
+              colorCycleEnabled={colorCycleEnabled}
+              colorCycleColors={colorCycleColors}
+              onZoomChange={setZoom}
               onPixelsChanged={handlePixelsChanged}
               onColorPicked={setCurrentColor}
               onSaveUndo={saveUndo}
@@ -435,7 +588,12 @@ function App() {
         </aside>
       </div>
 
+      <div className="resize-handle" onMouseDown={handleResizeStart}>
+        <div className="resize-handle-bar" />
+      </div>
+
       <FramePanel
+        style={{ height: bottomPanelHeight }}
         spriteSheet={spriteSheet}
         activeFrameIndex={activeFrameIndex}
         activeSequenceId={effectiveSequenceId}
@@ -449,6 +607,7 @@ function App() {
         onDeleteFrame={handleDeleteFrame}
         onReorderFrame={handleReorderFrame}
         onRenameFrame={handleRenameFrame}
+        onCopyToNewSequence={handleCopyToNewSequence}
       />
 
       {showGenerateModal && (
@@ -456,6 +615,18 @@ function App() {
           onGenerate={handleGenerate}
           onClose={() => setShowGenerateModal(false)}
         />
+      )}
+
+      {showHelp && (
+        <HelpModal onClose={() => setShowHelp(false)} />
+      )}
+
+      {showApiDocs && (
+        <ApiDocsModal onClose={() => setShowApiDocs(false)} />
+      )}
+
+      {showAbout && (
+        <AboutModal onClose={() => setShowAbout(false)} />
       )}
 
       {showExportModal && (

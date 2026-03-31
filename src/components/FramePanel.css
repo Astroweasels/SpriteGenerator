@@ -5,7 +5,7 @@
   padding: 12px;
   background: #16213e;
   border-top: 1px solid #333355;
-  max-height: 340px;
+  flex-shrink: 0;
   overflow-y: auto;
 }
 

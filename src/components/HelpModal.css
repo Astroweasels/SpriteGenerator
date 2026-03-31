@@ -1,0 +1,127 @@
+.help-modal {
+  background: #16213e;
+  border: 1px solid #333355;
+  border-radius: 12px;
+  width: 680px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.help-modal .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Table of contents */
+.help-toc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: #0f0f23;
+  border: 1px solid #333355;
+  border-radius: 8px;
+}
+
+.help-toc-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6666aa;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.help-toc a {
+  color: #88aaff;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 3px 0;
+  transition: color 0.15s;
+}
+
+.help-toc a:hover {
+  color: #aaccff;
+  text-decoration: underline;
+}
+
+/* Sections */
+.help-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scroll-margin-top: 20px;
+}
+
+.help-section h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #88aaff;
+  border-bottom: 1px solid #222244;
+  padding-bottom: 6px;
+}
+
+.help-section p {
+  margin: 0;
+  font-size: 13px;
+  color: #a0a0cc;
+  line-height: 1.6;
+}
+
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.help-table th {
+  text-align: left;
+  padding: 6px 10px;
+  background: #0f0f23;
+  color: #88aaff;
+  border-bottom: 1px solid #333355;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.help-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #1a1a3e;
+  color: #c0c0ee;
+}
+
+.help-table code {
+  background: #0f0f23;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #cc88ff;
+}
+
+.help-kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: #0f0f23;
+  border: 1px solid #444466;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: #cc88ff;
+}
+
+.help-tip {
+  padding: 10px 14px;
+  background: rgba(51, 85, 170, 0.1);
+  border: 1px solid #333366;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #a0a0cc;
+  line-height: 1.5;
+}
+
+.help-tip strong {
+  color: #88aaff;
+}

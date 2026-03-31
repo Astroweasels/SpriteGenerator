@@ -2,16 +2,18 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
-import type { GenerateRequest, GenerateResponse, ErrorResponse } from './types.js';
-import { generateRandomSprite } from './generate.js';
+import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB } from './types.js';
+import { generateRandomSprite, POSE_SEQUENCE_NAMES } from './generate.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';
 import { TEMPLATE_NAMES } from './templates.js';
+import { handleDraw, handleImport, handleExport, handleLayers, handleFrames, handleResize } from './editHandler.js';
 
 // ---- Constants & validation ----
 
-const VALID_STYLES = ['humanoid', 'creature', 'mech', 'abstract'] as const;
+const VALID_STYLES = ['humanoid', 'creature', 'mech', 'abstract', 'object'] as const;
 const VALID_SCHEMES = ['random', 'warm', 'cool', 'monochrome', 'complementary', 'earth', 'neon', 'pastel'] as const;
 const VALID_COMPLEXITY = ['simple', 'medium', 'complex'] as const;
+const VALID_WEAPONS = ['sword', 'dagger', 'bow', 'staff', 'none'] as const;
 const MAX_SIZE = 128;
 const MIN_SIZE = 8;
 const MAX_POSES = 7;
@@ -19,6 +21,16 @@ const MAX_POSES = 7;
 const S3_BUCKET = process.env.SPRITE_BUCKET;
 const S3_REGION = process.env.AWS_REGION || 'us-east-1';
 const URL_EXPIRY = 900; // 15 minutes
+
+function validateColorRGB(c: unknown, label: string): ColorRGB {
+  if (!c || typeof c !== 'object') throw new Error(`${label} must be an object with r, g, b`);
+  const o = c as Record<string, unknown>;
+  const r = Number(o.r), g = Number(o.g), b = Number(o.b);
+  if ([r, g, b].some(v => !Number.isFinite(v) || v < 0 || v > 255)) {
+    throw new Error(`${label} r/g/b must be 0-255`);
+  }
+  return { r: Math.round(r), g: Math.round(g), b: Math.round(b) };
+}
 
 function validateRequest(body: unknown): GenerateRequest {
   if (!body || typeof body !== 'object') {
@@ -50,16 +62,61 @@ function validateRequest(body: unknown): GenerateRequest {
   }
 
   const generatePoses = b.generatePoses !== undefined ? Boolean(b.generatePoses) : false;
-
   const poseCount = generatePoses ? Math.min(Number(b.poseCount) || 4, MAX_POSES) : 0;
 
-  // Template validation (optional field)
+  // Template
   let template: string | undefined;
   if (b.template) {
     if (typeof b.template !== 'string' || !TEMPLATE_NAMES.includes(b.template)) {
       throw new Error(`"template" must be one of: ${TEMPLATE_NAMES.join(', ')}`);
     }
     template = b.template;
+  }
+
+  // Weapon
+  let weapon: WeaponType | undefined;
+  if (b.weapon !== undefined) {
+    if (!VALID_WEAPONS.includes(b.weapon as typeof VALID_WEAPONS[number])) {
+      throw new Error(`"weapon" must be one of: ${VALID_WEAPONS.join(', ')}`);
+    }
+    weapon = b.weapon as WeaponType;
+  }
+
+  // Color overrides
+  let colorOverrides: RegionColorOverrides | undefined;
+  if (b.colorOverrides && typeof b.colorOverrides === 'object') {
+    const co = b.colorOverrides as Record<string, unknown>;
+    colorOverrides = {};
+    const regionKeys = ['hair', 'skin', 'tunic', 'arms', 'legs', 'feet', 'accent'] as const;
+    for (const key of regionKeys) {
+      if (co[key] && Array.isArray(co[key])) {
+        colorOverrides[key] = (co[key] as unknown[]).map((c, i) =>
+          validateColorRGB(c, `colorOverrides.${key}[${i}]`)
+        );
+      }
+    }
+    if (co.outline) {
+      colorOverrides.outline = validateColorRGB(co.outline, 'colorOverrides.outline');
+    }
+  }
+
+  // Selected sequences
+  let selectedSequences: string[] | undefined;
+  if (b.selectedSequences && Array.isArray(b.selectedSequences)) {
+    const valid = b.selectedSequences.filter(
+      (s): s is string => typeof s === 'string' && POSE_SEQUENCE_NAMES.includes(s)
+    );
+    if (valid.length > 0) selectedSequences = valid;
+  }
+
+  // Object variant
+  let objectVariant: number | undefined;
+  if (b.objectVariant !== undefined) {
+    const v = Number(b.objectVariant);
+    if (!Number.isInteger(v) || v < 0 || v > 9) {
+      throw new Error('"objectVariant" must be an integer 0-9');
+    }
+    objectVariant = v;
   }
 
   return {
@@ -71,6 +128,10 @@ function validateRequest(body: unknown): GenerateRequest {
     generatePoses,
     poseCount,
     ...(template ? { template } : {}),
+    ...(weapon ? { weapon } : {}),
+    ...(colorOverrides ? { colorOverrides } : {}),
+    ...(selectedSequences ? { selectedSequences } : {}),
+    ...(objectVariant !== undefined ? { objectVariant } : {}),
   };
 }
 
@@ -95,6 +156,21 @@ async function uploadToS3(buffer: Buffer, key: string, contentType: string): Pro
   return url.split('?')[0] + '?' + new URL(url).searchParams.toString();
 }
 
+// ---- Sequence grouping helper ----
+
+function buildSequences(frameNames: string[]): { name: string; frameIndices: number[] }[] {
+  const seqMap = new Map<string, number[]>();
+  for (let i = 0; i < frameNames.length; i++) {
+    // Frame names are like "Walk 1", "Walk 2", "Attack Slash 1" etc.
+    // Sequence name = everything before the trailing number
+    const match = frameNames[i].match(/^(.+?)\s+\d+$/);
+    const seqName = match ? match[1] : frameNames[i];
+    if (!seqMap.has(seqName)) seqMap.set(seqName, []);
+    seqMap.get(seqName)!.push(i);
+  }
+  return Array.from(seqMap.entries()).map(([name, frameIndices]) => ({ name, frameIndices }));
+}
+
 // ---- Lambda handler ----
 
 export async function handler(
@@ -104,7 +180,7 @@ export async function handler(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
   };
 
@@ -114,7 +190,7 @@ export async function handler(
   }
 
   try {
-    // Parse and validate
+    // Parse body
     let body: unknown;
     try {
       body = JSON.parse(event.body || '{}');
@@ -122,6 +198,40 @@ export async function handler(
       throw new Error('Invalid JSON in request body');
     }
 
+    // Route by path
+    const path = event.requestContext?.http?.path || event.rawPath || '/generate';
+
+    if (path === '/draw') {
+      const result = handleDraw(body);
+      return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
+    }
+
+    if (path === '/import') {
+      const result = await handleImport(body);
+      return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
+    }
+
+    if (path === '/export') {
+      const result = handleExport(body);
+      return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
+    }
+
+    if (path === '/layers') {
+      const result = handleLayers(body);
+      return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
+    }
+
+    if (path === '/frames') {
+      const result = handleFrames(body);
+      return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
+    }
+
+    if (path === '/resize') {
+      const result = handleResize(body);
+      return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
+    }
+
+    // Default: /generate
     const request = validateRequest(body);
 
     // Generate sprite
@@ -154,6 +264,7 @@ export async function handler(
         height: spriteSheet.height,
         frameCount: spriteSheet.frames.length,
         frameNames: spriteSheet.frames.map((f) => f.name),
+        sequences: buildSequences(spriteSheet.frames.map((f) => f.name)),
       },
       frames: frameDataURIs,
       sheet: sheetDataURI,

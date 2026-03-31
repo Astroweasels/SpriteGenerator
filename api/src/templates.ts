@@ -1,4 +1,4 @@
-import type { Color } from './types.js';
+import type { Color, WeaponType } from './types.js';
 
 /**
  * A character template defines specific colors for body regions,
@@ -9,6 +9,8 @@ export interface CharacterTemplate {
   description: string;
   /** Color for the outline/edge pixels */
   outline: Color;
+  /** Default weapon for this archetype */
+  weapon: WeaponType;
   /** Colors per body region — each region can have 1-3 colors for variety */
   regions: {
     hair: Color[];
@@ -53,6 +55,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Adventurer',
     description: 'Green-clad hero with blonde hair, brown boots, and a belt',
     outline: c(30, 30, 20),
+    weapon: 'sword',
     regions: {
       hair: [c(230, 200, 80), c(210, 180, 60), c(240, 215, 100)],
       skin: [c(240, 200, 160), c(230, 190, 150), c(245, 210, 170)],
@@ -68,6 +71,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Knight',
     description: 'Silver-armored warrior with dark undersuit and blue accents',
     outline: c(20, 20, 30),
+    weapon: 'sword',
     regions: {
       hair: [c(50, 50, 60), c(40, 40, 50)],
       skin: [c(230, 195, 165), c(220, 185, 155)],
@@ -83,6 +87,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Mage',
     description: 'Purple-robed spellcaster with white hair and golden accents',
     outline: c(25, 10, 35),
+    weapon: 'staff',
     regions: {
       hair: [c(230, 230, 245), c(215, 215, 235), c(245, 240, 255)],
       skin: [c(235, 210, 200), c(225, 200, 190)],
@@ -98,6 +103,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Rogue',
     description: 'Dark leather-clad thief with hood and daggers',
     outline: c(15, 15, 15),
+    weapon: 'dagger',
     regions: {
       hair: [c(50, 40, 35), c(40, 30, 25)],
       skin: [c(220, 185, 155), c(210, 175, 145)],
@@ -113,6 +119,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Warrior',
     description: 'Red-armored fighter with plate and dark hair',
     outline: c(30, 15, 10),
+    weapon: 'sword',
     regions: {
       hair: [c(40, 30, 25), c(30, 20, 15)],
       skin: [c(210, 170, 130), c(200, 160, 120)],
@@ -128,6 +135,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Ranger',
     description: 'Forest dweller in green and brown with a cloak',
     outline: c(20, 30, 15),
+    weapon: 'bow',
     regions: {
       hair: [c(130, 80, 40), c(110, 65, 30)],
       skin: [c(225, 195, 160), c(215, 185, 150)],
@@ -143,6 +151,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Paladin',
     description: 'Holy knight in white and gold armor with blue cape',
     outline: c(20, 20, 30),
+    weapon: 'sword',
     regions: {
       hair: [c(200, 180, 100), c(185, 165, 85)],
       skin: [c(235, 205, 175), c(225, 195, 165)],
@@ -158,6 +167,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Necromancer',
     description: 'Pale dark sorcerer in black robes with green accents',
     outline: c(10, 10, 10),
+    weapon: 'staff',
     regions: {
       hair: [c(20, 20, 25), c(15, 15, 20)],
       skin: [c(200, 200, 210), c(190, 190, 200)],
@@ -173,6 +183,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Pirate',
     description: 'Swashbuckler with red bandana, white shirt, and dark coat',
     outline: c(20, 15, 10),
+    weapon: 'sword',
     regions: {
       hair: [c(30, 25, 20), c(25, 20, 15)],
       skin: [c(215, 175, 135), c(205, 165, 125)],
@@ -188,6 +199,7 @@ export const TEMPLATES: Record<string, CharacterTemplate> = {
     name: 'Robot',
     description: 'Metallic android with blue visor and chrome plating',
     outline: c(20, 25, 30),
+    weapon: 'none',
     regions: {
       hair: [c(140, 150, 160), c(130, 140, 150)],
       skin: [c(60, 140, 210), c(50, 120, 190)],

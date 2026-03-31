@@ -98,3 +98,98 @@
 .color-swatch.custom {
   border-style: dashed;
 }
+
+/* Color Cycle */
+.color-cycle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #1a1a3e;
+  border-radius: 6px;
+  border: 1px solid #333355;
+}
+
+.color-cycle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.color-cycle-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaaacc;
+}
+
+.color-cycle-toggle {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #444466;
+  border-radius: 10px;
+  background: #222244;
+  color: #888899;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.color-cycle-toggle.active {
+  background: #3355aa;
+  color: #ffffff;
+  border-color: #5577cc;
+  box-shadow: 0 0 8px rgba(85, 119, 204, 0.4);
+}
+
+.color-cycle-slots {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.color-cycle-slot {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #444466;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.1s;
+}
+
+.color-cycle-slot:hover {
+  transform: scale(1.15);
+  border-color: #ff6666;
+}
+
+.color-cycle-slot.add-slot {
+  background: #222244;
+  color: #aaaacc;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+}
+
+.color-cycle-slot.add-slot:hover {
+  border-color: #55cc55;
+  color: #55cc55;
+}
+
+.color-cycle-clear {
+  padding: 2px 8px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid #444466;
+  border-radius: 4px;
+  color: #888899;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.color-cycle-clear:hover {
+  border-color: #ff6666;
+  color: #ff6666;
+}

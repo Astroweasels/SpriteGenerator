@@ -1,8 +1,22 @@
 import React, { useState } from 'react';
 import type { RandomGenOptions } from '../types';
 import { TEMPLATES, TEMPLATE_NAMES } from '../utils/templates';
-import { POSE_SEQUENCE_NAMES } from '../utils/generateSprite';
+import { POSE_SEQUENCE_NAMES, OBJECT_VARIANTS } from '../utils/generateSprite';
 import './GenerateModal.css';
+
+// Sensible default color scheme per object variant
+const OBJECT_COLOR_DEFAULTS: Record<number, RandomGenOptions['colorScheme']> = {
+  0: 'earth',       // Pine Tree
+  1: 'earth',       // Oak Tree
+  2: 'earth',       // Bush
+  3: 'monochrome',  // Rock
+  4: 'warm',        // House
+  5: 'warm',        // Chest
+  6: 'earth',       // Barrel
+  7: 'cool',        // Potion
+  8: 'cool',        // Crystal
+  9: 'warm',        // Campfire
+};
 
 interface GenerateModalProps {
   onGenerate: (options: RandomGenOptions) => void;
@@ -35,14 +49,21 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
           <div className="form-group">
             <label>Sprite Style</label>
             <div className="style-cards">
-              {(['humanoid', 'creature', 'mech', 'abstract'] as const).map((style) => (
+              {(['humanoid', 'creature', 'mech', 'abstract', 'object'] as const).map((style) => (
                 <button
                   key={style}
                   className={`style-card ${options.style === style ? 'active' : ''}`}
-                  onClick={() => setOptions({ ...options, style })}
+                  onClick={() => {
+                    const update: Partial<RandomGenOptions> = { style };
+                    if (style === 'object') {
+                      update.colorScheme = 'earth';
+                      update.objectVariant = undefined;
+                    }
+                    setOptions({ ...options, ...update });
+                  }}
                 >
                   <span className="style-icon">
-                    {style === 'humanoid' ? '🧑' : style === 'creature' ? '🐉' : style === 'mech' ? '🤖' : '🔮'}
+                    {style === 'humanoid' ? '🧑' : style === 'creature' ? '🐉' : style === 'mech' ? '🤖' : style === 'object' ? '🌲' : '🔮'}
                   </span>
                   <span className="style-name">{style.charAt(0).toUpperCase() + style.slice(1)}</span>
                 </button>
@@ -77,6 +98,28 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
               </select>
             </div>
           </div>
+
+          {options.style === 'object' && (
+            <div className="form-group">
+              <label>Object Type</label>
+              <div className="object-variant-grid">
+                {OBJECT_VARIANTS.map((obj) => (
+                  <button
+                    key={obj.id}
+                    className={`object-variant-btn ${options.objectVariant === obj.id ? 'active' : ''}`}
+                    onClick={() => setOptions({
+                      ...options,
+                      objectVariant: obj.id,
+                      colorScheme: OBJECT_COLOR_DEFAULTS[obj.id] ?? 'earth',
+                    })}
+                  >
+                    <span className="object-variant-icon">{obj.icon}</span>
+                    <span className="object-variant-name">{obj.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {options.style === 'humanoid' && (
             <div className="form-group">
@@ -136,6 +179,7 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
             </label>
           </div>
 
+          {options.style !== 'object' && (
           <div className="form-group">
             <label>Animation Sequences</label>
             <div className="pose-preset-grid">
@@ -170,12 +214,18 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
               })}
             </div>
           </div>
+          )}
         </div>
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" onClick={handleGenerate}>
-            🎲 Generate Sprite
+          <button
+            className="btn-primary"
+            onClick={handleGenerate}
+            disabled={options.style === 'object' && options.objectVariant === undefined}
+            title={options.style === 'object' && options.objectVariant === undefined ? 'Select an object type first' : ''}
+          >
+            {options.style === 'object' ? '🌲 Generate Object' : '🎲 Generate Sprite'}
           </button>
         </div>
       </div>

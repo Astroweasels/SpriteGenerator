@@ -1,0 +1,135 @@
+.preset-bar {
+  background: #0f0f23;
+  border-bottom: 1px solid #333355;
+}
+
+.preset-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.preset-bar-header:hover {
+  background: #16213e;
+}
+
+.preset-bar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c0c0e0;
+}
+
+.preset-bar-toggle {
+  font-size: 10px;
+  color: #666688;
+}
+
+.preset-bar-body {
+  padding: 6px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preset-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #333355;
+  border-radius: 14px;
+  background: #16213e;
+  color: #c0c0e0;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.preset-chip:hover {
+  border-color: #5555aa;
+  background: #1e2a50;
+}
+
+.preset-chip.active {
+  border-color: #88aaff;
+  background: #2a2a5e;
+  color: #fff;
+}
+
+.preset-chip-swatch .swatch-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.preset-chip-icon {
+  font-size: 14px;
+}
+
+.preset-chip-name {
+  font-size: 12px;
+}
+
+.preset-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-opt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preset-opt label {
+  font-size: 11px;
+  color: #888899;
+  white-space: nowrap;
+}
+
+.preset-opt select {
+  background: #16213e;
+  color: #e0e0ff;
+  border: 1px solid #333355;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+.preset-opt-check {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #888899;
+  cursor: pointer;
+}
+
+.preset-regen-btn {
+  border: 1px solid #333355;
+  border-radius: 4px;
+  background: #16213e;
+  color: #c0c0e0;
+  font-size: 14px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.preset-regen-btn:hover {
+  border-color: #5555aa;
+  background: #2a2a5e;
+}

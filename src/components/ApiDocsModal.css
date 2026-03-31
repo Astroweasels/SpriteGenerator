@@ -1,0 +1,156 @@
+.api-docs-modal {
+  background: #16213e;
+  border: 1px solid #333355;
+  border-radius: 12px;
+  width: 720px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.api-docs-modal .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.api-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-section h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #88aaff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.api-section p {
+  margin: 0;
+  font-size: 13px;
+  color: #a0a0cc;
+  line-height: 1.5;
+}
+
+.api-endpoint-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #0f0f23;
+  border: 1px solid #333355;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.api-method {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.api-method.post {
+  background: #2a4a2e;
+  color: #66dd88;
+}
+
+.api-method.get {
+  background: #2a2a4e;
+  color: #88aaff;
+}
+
+.api-url {
+  color: #e0e0ff;
+  word-break: break-all;
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.api-table th {
+  text-align: left;
+  padding: 6px 10px;
+  background: #0f0f23;
+  color: #88aaff;
+  border-bottom: 1px solid #333355;
+  font-weight: 600;
+}
+
+.api-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #1a1a3e;
+  color: #c0c0ee;
+}
+
+.api-table code {
+  background: #0f0f23;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #cc88ff;
+}
+
+.api-code-block {
+  background: #0a0a1a;
+  border: 1px solid #333355;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #c0c0ee;
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.5;
+}
+
+.api-link-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.api-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid #3355aa;
+  border-radius: 6px;
+  background: #1a1a2e;
+  color: #88aaff;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.api-link-btn:hover {
+  background: #2a2a4e;
+  border-color: #5577cc;
+  color: #aaccff;
+}
+
+.api-tip {
+  padding: 10px 14px;
+  background: rgba(51, 85, 170, 0.1);
+  border: 1px solid #333366;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #a0a0cc;
+  line-height: 1.5;
+}
+
+.api-tip strong {
+  color: #88aaff;
+}

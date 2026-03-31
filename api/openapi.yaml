@@ -1,10 +1,170 @@
 openapi: 3.1.0
 info:
-  title: SpriteForge API
-  version: 1.0.0
+  title: AstroSprite API
+  version: 3.0.0
   description: |
-    Generate pixel art sprites and sprite sheets programmatically.
-    Designed for AI agents to create game assets on demand.
+    Generate pixel art sprites, draw on them, manage layers and frames,
+    import PNGs, and export finished sprite sheets — all via REST.
+    Designed for AI agents to create and edit game-ready character assets.
+
+    ## Quick start for AI agents
+
+    1. **Generate** — `POST /generate` with a template or style to get a sprite.
+    2. **Edit** — `POST /draw` with drawing operations to modify pixels.
+    3. **Layers** — `POST /layers` to add, merge, reorder, or manage layers.
+    4. **Frames** — `POST /frames` to add/delete/duplicate animation frames.
+    5. **Import** — `POST /import` with a base64 PNG to bring in external art.
+    6. **Export** — `POST /export` to render the sprite as PNGs.
+    7. **Resize** — `POST /resize` to change canvas dimensions.
+
+    All editing endpoints accept and return a **SpriteData** object — a JSON-safe
+    representation of the full sprite state. Pass it between calls to chain operations.
+
+    ## Sprite data round-trip
+
+    Every response includes a `sprite` object you can feed back into subsequent
+    requests. This stateless design means the API needs no sessions.
+
+    ---
+
+    ## Pixel Art Drawing Guide for AI Agents
+
+    Use this guide when drawing custom characters with `POST /draw`.
+    All proportions are fractions of canvas `size` (e.g. 32×32).
+    Center X (`cx`) = `floor(size / 2)`. Coordinates are 0-indexed.
+
+    ### Canvas size recommendations
+    - **32×32** — standard for small game sprites (recommended default)
+    - **48×48** — more detail, good for larger characters
+    - **64×64** — high detail pixel art
+    - At 32×32, most body parts are 2-8 pixels wide. Every pixel matters.
+
+    ### Planning a character (step by step)
+    1. **Start with an empty canvas** — `POST /resize` to set your size, or use the blank sprite from any response.
+    2. **Draw the outline first** — Use pencil with a dark color (e.g. `[30,20,40,255]`) to place edge pixels.
+    3. **Fill body regions** — Use `fill` tool or `rect` with `filled: true` for large areas.
+    4. **Add details last** — Eyes, hair highlights, belt buckles, weapon, etc.
+    5. **Use layers** — Put the outline on layer 0, fill on layer 1, details on layer 2. This lets you edit regions independently.
+
+    ### Standard humanoid proportions (fraction of canvas size)
+
+    On a 32×32 canvas (`cx` = 16):
+
+    | Body Part   | Top Y          | Bottom Y       | Half-Width      | 32×32 values        |
+    |-------------|----------------|----------------|-----------------|----------------------|
+    | **Head**    | `size * 0.06`  | `size * 0.25`  | `size * 0.15`   | y=2..8, ±4px from cx |
+    | **Neck**    | `size * 0.25`  | `size * 0.30`  | `size * 0.06`   | y=8..9, ±1px from cx |
+    | **Torso**   | `size * 0.30`  | `size * 0.60`  | `size * 0.20`   | y=10..19, ±6px from cx |
+    | **Arms**    | `size * 0.30`  | `size * 0.55`  | `size * 0.06`   | y=10..17, at ±7px from cx |
+    | **Belt/Acc**| `size * 0.55`  | `size * 0.62`  | torso width     | y=17..19, same as torso |
+    | **Legs**    | `size * 0.62`  | `size * 0.90`  | `size * 0.08`   | y=20..28, ±3px from cx |
+    | **Feet**    | `size * 0.90`  | `size * 0.97`  | `size * 0.10`   | y=29..31, ±3px from cx |
+
+    **Example**: To draw a humanoid torso on a 32×32 canvas, use:
+    ```json
+    { "tool": "rect", "color": [0,120,200,255], "x1": 10, "y1": 10, "x2": 22, "y2": 19, "filled": true }
+    ```
+
+    ### How to draw common body parts
+
+    **Head** — Use `circle` with `filled: true`. Center at `(cx, size * 0.16)`, radius `size * 0.10`.
+    For a **big head**, increase the radius to `size * 0.15` or `size * 0.18`.
+
+    **Eyes** — Two single pixels at `(cx - 2, eyeY)` and `(cx + 2, eyeY)` where `eyeY` is 60-65% down the head.
+    White pixel for sclera, then dark pixel `[20,20,30,255]` for pupil at same position (on a higher layer, or just use pupil color).
+
+    **Hair** — Pencil pixels above and around the head.
+    - *Short hair*: 1-2 rows of pixels above the head top.
+    - *Long hair*: extend pixels down the sides of the head to shoulder level.
+    - *Spiky/up hair*: place pixels above the head in a jagged pattern, going higher in the center.
+    - *Curly hair*: alternating pixels in a zigzag pattern above and around the head.
+
+    **Arms** — Vertical lines 1-2px wide, starting at shoulder height, extending to hip level.
+    Position at `torso_half_width + 1` from center.
+    - *Extra arms*: Add additional arm lines at different X offsets or Y positions.
+    - *Wiggly arms*: Use pencil with a sequence of points that zigzag: `[[x,y],[x+1,y+1],[x,y+2],[x+1,y+3],...]`.
+
+    **Legs** — Two vertical rectangles below the torso, separated by a 1-2px gap at center.
+
+    **Tail** — Pencil points extending from the back (one side) of the torso, curving downward or outward.
+
+    **Wings** — Triangle shapes on each side of the upper torso. Use line tool for wing edges, fill for membrane.
+
+    ### Non-humanoid characters
+
+    **Blob/slime** — Single filled circle, no separate limbs. Eyes placed at 40% down from top.
+
+    **Spider/insect** — Elliptical body (filled circle), 4-8 legs as angled lines extending outward-downward from the body edge.
+
+    **Snake** — No limbs. S-curve of pencil points, 2-3px wide, with a wider head section.
+
+    **Bird** — Egg-shaped body, triangle beak on one side, wing shapes, thin stick legs.
+
+    **Mech/robot** — Use rectangles for all parts (boxy look). Squared head, wide rectangular torso, thick rectangular legs.
+
+    ### Special effects as body parts
+
+    **Fire/flames** — Use pencil with `colorCycle` in warm colors:
+    `"colorCycle": [[255,60,0,255],[255,160,0,255],[255,220,40,255],[255,100,0,200]]`
+    Draw at random-ish points below the torso, tapering to fewer pixels further down. Use some semi-transparent alpha (200, 180) for glow.
+
+    **Lightning/electricity** — Zigzag lines in bright cyan/white: `[100,200,255,255]` and `[255,255,255,200]`.
+
+    **Aura/glow** — Layer 0: character. Layer 1: slightly larger circle behind character in a translucent color `[R,G,B,80]`.
+
+    **Smoke/clouds** — Scattered individual pixels in grays with varying alpha: `[180,180,180,120]`.
+
+    ### Color guidelines
+
+    - **Outlines**: Use a color 60-80 units darker than the fill per channel. E.g., fill `[0,120,200]` → outline `[0,50,120]`.
+    - **Shading**: Use 2-3 shades per region — base, shadow (darker by 30-50), highlight (lighter by 30-50).
+    - **Skin tones**: Common range: `[140,90,60]` to `[255,220,180]`.
+    - **Metal/armor**: `[140,140,160]` base, `[200,200,220]` highlight, `[80,80,100]` shadow.
+    - **For texture variation**: Apply brush strokes with slightly varied colors rather than flat fill.
+
+    ### Composition workflow example
+
+    To draw "a purple creature with 4 wiggly arms and fire coming from its base":
+
+    1. `POST /resize` → 32×32 canvas
+    2. `POST /draw` — Layer 0 (outline):
+       - `circle` at (16,12) r=7, color [40,10,50,255] — body outline
+    3. `POST /draw` — Layer 0 (fill on same layer inside outline):
+       - `circle` at (16,12) r=6, color [140,40,180,255] — purple body fill
+    4. `POST /draw` — Layer 0 (arms):
+       - `pencil` with 4 sets of zigzag points extending from body sides
+       - Left upper arm: `[[7,9],[6,10],[7,11],[6,12],[7,13]]`
+       - Left lower arm: `[[7,14],[6,15],[7,16],[6,17],[7,18]]`
+       - Right upper arm: `[[25,9],[26,10],[25,11],[26,12],[25,13]]`
+       - Right lower arm: `[[25,14],[26,15],[25,16],[26,17],[25,18]]`
+    5. `POST /draw` — Layer 0 (eyes):
+       - `pencil` points at `[[14,10],[18,10]]`, color [255,255,255,255]
+    6. `POST /draw` — Layer 1 (fire effect):
+       - `pencil` with `colorCycle` of `[[255,60,0,255],[255,160,0,255],[255,220,40,255]]`
+       - Points scattered below body: `[[14,20],[15,21],[16,22],[17,21],[18,20],[15,23],[17,23],[16,24]]`
+    7. `POST /export` — Get the final PNG
+
+    ### Tips for quality
+    - **Fewer pixels = better** at small sizes. Don't try to draw realistic detail at 32×32.
+    - **Symmetry**: Draw only the left half, then duplicate and mirror via a second draw call.
+    - **Iterate**: Export after each major step, inspect the result, adjust.
+    - **Use layers**: Outline layer + body fill layer + detail layer. If something looks wrong, redraw just that layer.
+
+    ---
+
+    ## Color region map (humanoid)
+
+    | Region   | Description                          |
+    |----------|--------------------------------------|
+    | hair     | Top-of-head hair pixels              |
+    | skin     | Face and exposed skin                |
+    | tunic    | Main torso / chest armor             |
+    | arms     | Sleeve or arm-guard pixels           |
+    | legs     | Trousers / leg armor                 |
+    | feet     | Boots / shoes                        |
+    | accent   | Belt, trim, decorative details       |
+    | outline  | Single color used for the outline    |
+
   contact:
     name: Astroweasels
     url: https://github.com/Astroweasels/SpriteGenerator
@@ -24,12 +184,13 @@ paths:
   /generate:
     post:
       operationId: generateSprite
-      summary: Generate a random pixel art sprite
+      summary: Generate a pixel art sprite with optional animations and weapons
       description: |
-        Creates a sprite (and optional pose variations) based on the given
-        parameters. Returns individual frame PNGs as base64 data URIs and a
-        combined sprite sheet. If the server has S3 configured, also returns
-        a pre-signed download URL that expires in 15 minutes.
+        Creates a sprite based on the given parameters. Supports character
+        templates, per-region color overrides, weapon selection, and named
+        animation sequences. Returns individual frame PNGs as base64 data URIs,
+        a combined sprite sheet, and sequence metadata mapping frames to
+        animations.
       requestBody:
         required: true
         content:
@@ -38,43 +199,100 @@ paths:
               $ref: '#/components/schemas/GenerateRequest'
             examples:
               simpleHumanoid:
-                summary: Simple humanoid character
+                summary: Simple humanoid — no animation
                 value:
                   style: humanoid
                   size: 32
                   symmetrical: true
                   colorScheme: warm
                   complexity: simple
-                  generatePoses: false
-                  poseCount: 0
-              fullCharacterSheet:
-                summary: Full character with walk cycle
-                value:
-                  style: humanoid
-                  size: 64
-                  symmetrical: true
-                  colorScheme: cool
-                  complexity: medium
-                  generatePoses: true
-                  poseCount: 4
-              neonCreature:
-                summary: Neon creature with all poses
-                value:
-                  style: creature
-                  size: 48
-                  symmetrical: true
-                  colorScheme: neon
-                  complexity: complex
-                  generatePoses: true
-                  poseCount: 7
-              adventurerTemplate:
-                summary: Green-clad adventurer with walk cycle
+              knightAllSequences:
+                summary: Knight with all six animation sequences
                 value:
                   style: humanoid
                   size: 32
                   symmetrical: true
                   complexity: medium
-                  template: adventurer
+                  template: knight
+                  weapon: sword
+                  selectedSequences:
+                    - Idle
+                    - Walk
+                    - Jump
+                    - Attack Slash
+                    - Attack Thrust
+                    - Attack Overhead
+              customColorMage:
+                summary: Purple-robed mage with staff and custom colors
+                value:
+                  style: humanoid
+                  size: 32
+                  symmetrical: true
+                  complexity: medium
+                  template: mage
+                  weapon: staff
+                  selectedSequences:
+                    - Idle
+                    - Walk
+                    - Attack Slash
+                  colorOverrides:
+                    tunic:
+                      - { r: 60, g: 20, b: 90 }
+                      - { r: 100, g: 40, b: 140 }
+                      - { r: 160, g: 80, b: 200 }
+                    hair:
+                      - { r: 200, g: 200, b: 220 }
+                      - { r: 240, g: 240, b: 255 }
+                    accent:
+                      - { r: 200, g: 180, b: 40 }
+                      - { r: 240, g: 220, b: 80 }
+                    outline:
+                      r: 30
+                      g: 10
+                      b: 50
+              fireRanger:
+                summary: Fire-themed ranger with bow
+                value:
+                  style: humanoid
+                  size: 32
+                  symmetrical: true
+                  complexity: medium
+                  template: ranger
+                  weapon: bow
+                  selectedSequences:
+                    - Idle
+                    - Walk
+                    - Attack Slash
+                  colorOverrides:
+                    tunic:
+                      - { r: 120, g: 30, b: 10 }
+                      - { r: 180, g: 60, b: 20 }
+                      - { r: 220, g: 100, b: 40 }
+                    hair:
+                      - { r: 200, g: 80, b: 20 }
+                      - { r: 240, g: 140, b: 40 }
+              neonRobot:
+                summary: Neon robot with no weapon — all sequences
+                value:
+                  style: mech
+                  size: 48
+                  symmetrical: true
+                  colorScheme: neon
+                  complexity: complex
+                  template: robot
+                  weapon: none
+                  selectedSequences:
+                    - Idle
+                    - Walk
+                    - Jump
+              legacyPoseMode:
+                summary: Legacy mode — numbered poses instead of sequences
+                value:
+                  style: humanoid
+                  size: 32
+                  symmetrical: true
+                  colorScheme: cool
+                  complexity: medium
                   generatePoses: true
                   poseCount: 4
       responses:
@@ -97,6 +315,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /docs:
+    get:
+      operationId: swaggerUI
+      summary: Interactive Swagger UI (local dev only)
+      responses:
+        '200':
+          description: HTML page with Swagger UI
+          content:
+            text/html: {}
+
+  /openapi.yaml:
+    get:
+      operationId: openapiSpec
+      summary: Raw OpenAPI specification
+      responses:
+        '200':
+          description: YAML spec
+          content:
+            text/yaml: {}
+
   /health:
     get:
       operationId: healthCheck
@@ -105,8 +343,421 @@ paths:
         '200':
           description: Service is healthy
 
+  /draw:
+    post:
+      operationId: drawOnSprite
+      summary: Apply drawing operations to a sprite
+      description: |
+        Accepts a sprite, target frame/layer indices, and an array of drawing
+        operations. Returns the modified sprite with re-rendered PNGs.
+
+        Supported tools: pencil, eraser, fill, line, rect, circle.
+        The pencil tool supports color cycling via the `colorCycle` field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrawRequest'
+            examples:
+              pencilDraw:
+                summary: Draw red pixels with pencil
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  frameIndex: 0
+                  layerIndex: 0
+                  operations:
+                    - tool: pencil
+                      color: [255, 0, 0, 255]
+                      points: [[5,5],[6,5],[7,5],[8,5]]
+                      brushSize: 1
+              fillArea:
+                summary: Flood fill an area green
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  frameIndex: 0
+                  layerIndex: 0
+                  operations:
+                    - tool: fill
+                      color: [0, 200, 0, 255]
+                      x: 16
+                      y: 16
+              drawShapes:
+                summary: Draw a line and filled rectangle
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  frameIndex: 0
+                  layerIndex: 0
+                  operations:
+                    - tool: line
+                      color: [255, 255, 0, 255]
+                      x1: 0
+                      y1: 0
+                      x2: 31
+                      y2: 31
+                    - tool: rect
+                      color: [0, 0, 255, 255]
+                      x1: 10
+                      y1: 10
+                      x2: 20
+                      y2: 20
+                      filled: true
+              colorCyclePaint:
+                summary: Pencil with rainbow color cycling
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  frameIndex: 0
+                  layerIndex: 0
+                  operations:
+                    - tool: pencil
+                      points: [[0,16],[1,16],[2,16],[3,16],[4,16],[5,16],[6,16]]
+                      colorCycle:
+                        - [255,0,0,255]
+                        - [255,127,0,255]
+                        - [255,255,0,255]
+                        - [0,255,0,255]
+                        - [0,0,255,255]
+                        - [75,0,130,255]
+                        - [148,0,211,255]
+      responses:
+        '200':
+          description: Drawing applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpriteResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /import:
+    post:
+      operationId: importPNG
+      summary: Import a PNG image as a sprite
+      description: |
+        Accepts a base64-encoded PNG image and converts it to a sprite.
+        The image is scaled down if it exceeds maxDim (default 128).
+        Returns the sprite data with pixel colors extracted from the image.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+            examples:
+              importSmall:
+                summary: Import a small PNG
+                value:
+                  image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
+                  maxDim: 64
+      responses:
+        '200':
+          description: Import successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpriteResponse'
+        '400':
+          description: Invalid image
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /export:
+    post:
+      operationId: exportSprite
+      summary: Render sprite data to PNGs
+      description: |
+        Accepts sprite data and renders it to individual frame PNGs and a
+        combined sprite sheet. Returns base64 data URIs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Export successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpriteResponse'
+        '400':
+          description: Invalid sprite data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /layers:
+    post:
+      operationId: manageLayers
+      summary: Add, delete, duplicate, merge, or modify layers
+      description: |
+        Perform layer management operations on a specific frame.
+        Actions: add, delete, duplicate, merge, reorder, rename, visibility, opacity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LayerRequest'
+            examples:
+              addLayer:
+                summary: Add a new layer
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  frameIndex: 0
+                  layerIndex: 0
+                  action: add
+                  name: "Background"
+              mergeDown:
+                summary: Merge layer 1 down into layer 0
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                          - name: Layer 2
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  frameIndex: 0
+                  layerIndex: 1
+                  action: merge
+      responses:
+        '200':
+          description: Layer operation applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpriteResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /frames:
+    post:
+      operationId: manageFrames
+      summary: Add, delete, or duplicate animation frames
+      description: |
+        Manage frames in a sprite. Actions: add, delete, duplicate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrameRequest'
+            examples:
+              addFrame:
+                summary: Add a new frame
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  action: add
+                  name: "Walk 2"
+              duplicateFrame:
+                summary: Duplicate the first frame
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {"16,16": [255,0,0,255]}
+                  frameIndex: 0
+                  action: duplicate
+      responses:
+        '200':
+          description: Frame operation applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpriteResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /resize:
+    post:
+      operationId: resizeCanvas
+      summary: Resize the sprite canvas
+      description: |
+        Changes the canvas dimensions. Pixels outside the new bounds are cropped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResizeRequest'
+            examples:
+              resize64:
+                summary: Resize to 64x64
+                value:
+                  sprite:
+                    width: 32
+                    height: 32
+                    frames:
+                      - name: Frame 1
+                        layers:
+                          - name: Layer 1
+                            visible: true
+                            opacity: 1
+                            pixels: {}
+                  width: 64
+                  height: 64
+      responses:
+        '200':
+          description: Resize applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpriteResponse'
+        '400':
+          description: Invalid dimensions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
+    ColorRGB:
+      type: object
+      required: [r, g, b]
+      properties:
+        r:
+          type: integer
+          minimum: 0
+          maximum: 255
+        g:
+          type: integer
+          minimum: 0
+          maximum: 255
+        b:
+          type: integer
+          minimum: 0
+          maximum: 255
+      description: An RGB color value (0-255 per channel).
+
+    RegionColorOverrides:
+      type: object
+      description: |
+        Override the generated palette for specific body regions.
+        Array regions accept 1–3 colors (dark → light gradient).
+      properties:
+        hair:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        skin:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        tunic:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        arms:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        feet:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        accent:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColorRGB'
+          maxItems: 3
+        outline:
+          $ref: '#/components/schemas/ColorRGB'
+
     GenerateRequest:
       type: object
       required:
@@ -115,47 +766,81 @@ components:
       properties:
         style:
           type: string
-          enum: [humanoid, creature, mech, abstract]
-          description: The type of sprite to generate
+          enum: [humanoid, creature, mech, abstract, object]
+          description: >-
+            The body archetype to generate. Use `object` for environment props
+            and items (trees, rocks, houses, chests, barrels, potions, crystals, campfires).
         size:
           type: integer
           minimum: 8
           maximum: 128
-          description: Width and height of the sprite in pixels (square)
+          description: Width **and** height of each frame in pixels (always square).
         symmetrical:
           type: boolean
           default: true
-          description: Whether to mirror the sprite horizontally
+          description: Mirror the sprite horizontally.
         colorScheme:
           type: string
           enum: [random, warm, cool, monochrome, complementary, earth, neon, pastel]
           default: random
-          description: Color palette strategy
+          description: |
+            Palette strategy. Ignored when `colorOverrides` fully specifies all regions.
         complexity:
           type: string
           enum: [simple, medium, complex]
           default: medium
-          description: Detail level of the generated sprite
+          description: How many colors / detail pixels to use.
+        template:
+          type: string
+          enum: [adventurer, knight, mage, rogue, warrior, ranger, paladin, necromancer, pirate, robot]
+          description: |
+            Character archetype preset. Applies themed region colors and a default
+            weapon. Region colors from `colorOverrides` take priority over the
+            template palette, so you can use a template as a base and tweak
+            individual regions.
+        weapon:
+          type: string
+          enum: [sword, dagger, bow, staff, none]
+          description: |
+            Weapon held by the character. Overrides the template's default weapon.
+            Set to `none` to remove the weapon even when a template specifies one.
+        colorOverrides:
+          $ref: '#/components/schemas/RegionColorOverrides'
+        selectedSequences:
+          type: array
+          items:
+            type: string
+            enum: [Idle, Walk, Jump, Attack Slash, Attack Thrust, Attack Overhead]
+          description: |
+            Named animation sequences to generate. Each sequence produces
+            multiple frames (e.g. Walk → 4 frames). If omitted:
+            - Without `generatePoses`: single Idle frame
+            - With `generatePoses`: legacy numbered poses
         generatePoses:
           type: boolean
           default: false
-          description: Whether to generate animation pose frames
+          description: |
+            **Legacy field.** Generates numbered individual pose frames instead of
+            named sequences. Prefer `selectedSequences` for new integrations.
         poseCount:
           type: integer
           minimum: 0
           maximum: 7
           default: 0
           description: |
-            Number of pose frames to generate (max 7).
-            Available poses: Walk 1, Walk 2, Arms Up, Crouch, Jump, Attack R, Attack L
-        template:
+            Number of legacy pose frames (used with `generatePoses: true`).
+
+    SequenceInfo:
+      type: object
+      properties:
+        name:
           type: string
-          enum: [adventurer, knight, mage, rogue, warrior, ranger, paladin, necromancer, pirate, robot]
-          description: |
-            Optional character template. Applies region-based coloring so the
-            sprite resembles a recognisable archetype (e.g. green-clad adventurer,
-            dark-robed necromancer). Only used when style is 'humanoid'.
-            When omitted, colorScheme determines the palette instead.
+          description: Sequence name (e.g. "Walk", "Attack Slash")
+        frameIndices:
+          type: array
+          items:
+            type: integer
+          description: Indices into the `frames` array for this sequence.
 
     GenerateResponse:
       type: object
@@ -176,20 +861,27 @@ components:
               type: array
               items:
                 type: string
+            sequences:
+              type: array
+              items:
+                $ref: '#/components/schemas/SequenceInfo'
+              description: |
+                Maps each animation sequence to its frame indices. Use this to
+                slice the `frames` array into individual animations.
         frames:
           type: array
-          description: Individual frame PNGs as base64 data URIs
+          description: Individual frame PNGs as `data:image/png;base64,…` URIs.
           items:
             type: string
             format: uri
         sheet:
           type: string
           format: uri
-          description: Combined sprite sheet as a base64 data URI
+          description: Combined sprite sheet as a base64 data URI.
         sheetUrl:
           type: string
           format: uri
-          description: Pre-signed S3 URL (15 min expiry). Only present when S3 is configured.
+          description: Pre-signed S3 download URL (15 min expiry). Only present when S3 is configured.
 
     ErrorResponse:
       type: object
@@ -199,3 +891,261 @@ components:
           const: false
         error:
           type: string
+
+    # ---- Sprite interchange format ----
+
+    ColorRGBA:
+      type: array
+      description: Color as [r, g, b, a] (0-255 each).
+      items:
+        type: integer
+        minimum: 0
+        maximum: 255
+      minItems: 4
+      maxItems: 4
+
+    LayerData:
+      type: object
+      required: [name, visible, opacity, pixels]
+      properties:
+        name:
+          type: string
+        visible:
+          type: boolean
+        opacity:
+          type: number
+          minimum: 0
+          maximum: 1
+        pixels:
+          type: object
+          description: |
+            Pixel map. Keys are "x,y" strings, values are [r,g,b,a] arrays.
+          additionalProperties:
+            $ref: '#/components/schemas/ColorRGBA'
+
+    FrameData:
+      type: object
+      required: [name, layers]
+      properties:
+        name:
+          type: string
+        layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/LayerData'
+
+    SpriteData:
+      type: object
+      required: [width, height, frames]
+      description: |
+        JSON-safe sprite state. Pass this between API calls to chain operations.
+        Every editing endpoint returns an updated SpriteData in the response.
+      properties:
+        width:
+          type: integer
+          minimum: 1
+          maximum: 128
+        height:
+          type: integer
+          minimum: 1
+          maximum: 128
+        frames:
+          type: array
+          items:
+            $ref: '#/components/schemas/FrameData'
+          maxItems: 64
+
+    SpriteResponse:
+      type: object
+      description: Response from all editing endpoints.
+      properties:
+        success:
+          type: boolean
+          const: true
+        sprite:
+          $ref: '#/components/schemas/SpriteData'
+        frames:
+          type: array
+          description: Individual frame PNGs as base64 data URIs.
+          items:
+            type: string
+            format: uri
+        sheet:
+          type: string
+          format: uri
+          description: Combined sprite sheet as a base64 data URI.
+
+    # ---- Endpoint-specific request schemas ----
+
+    DrawOperation:
+      type: object
+      required: [tool]
+      properties:
+        tool:
+          type: string
+          enum: [pencil, eraser, fill, line, rect, circle]
+        color:
+          $ref: '#/components/schemas/ColorRGBA'
+        points:
+          type: array
+          description: Pixel coordinates for pencil/eraser.
+          items:
+            type: array
+            items:
+              type: integer
+            minItems: 2
+            maxItems: 2
+        brushSize:
+          type: integer
+          minimum: 1
+          maximum: 32
+          default: 1
+        x:
+          type: integer
+          description: Target x (fill).
+        y:
+          type: integer
+          description: Target y (fill).
+        x1:
+          type: integer
+          description: Start x (line/rect).
+        y1:
+          type: integer
+          description: Start y (line/rect).
+        x2:
+          type: integer
+          description: End x (line/rect).
+        y2:
+          type: integer
+          description: End y (line/rect).
+        cx:
+          type: integer
+          description: Center x (circle).
+        cy:
+          type: integer
+          description: Center y (circle).
+        radius:
+          type: integer
+          description: Radius (circle).
+        filled:
+          type: boolean
+          default: false
+          description: Whether rect/circle should be filled.
+        colorCycle:
+          type: array
+          description: |
+            Array of up to 7 colors to cycle through when painting with pencil.
+            Each point advances to the next color in the array.
+          items:
+            $ref: '#/components/schemas/ColorRGBA'
+          maxItems: 7
+
+    DrawRequest:
+      type: object
+      required: [sprite, frameIndex, layerIndex, operations]
+      properties:
+        sprite:
+          $ref: '#/components/schemas/SpriteData'
+        frameIndex:
+          type: integer
+          minimum: 0
+        layerIndex:
+          type: integer
+          minimum: 0
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DrawOperation'
+          maxItems: 1000
+
+    ImportRequest:
+      type: object
+      required: [image]
+      properties:
+        image:
+          type: string
+          description: Base64-encoded PNG (with or without data URI prefix).
+        maxDim:
+          type: integer
+          minimum: 1
+          maximum: 128
+          default: 128
+          description: Max width/height. Image is scaled if larger.
+
+    ExportRequest:
+      type: object
+      required: [sprite]
+      properties:
+        sprite:
+          $ref: '#/components/schemas/SpriteData'
+        scale:
+          type: integer
+          minimum: 1
+          maximum: 4
+          default: 1
+        columns:
+          type: integer
+          minimum: 1
+          description: Number of columns in the sprite sheet layout.
+
+    LayerRequest:
+      type: object
+      required: [sprite, frameIndex, action]
+      properties:
+        sprite:
+          $ref: '#/components/schemas/SpriteData'
+        frameIndex:
+          type: integer
+          minimum: 0
+        layerIndex:
+          type: integer
+          minimum: 0
+        action:
+          type: string
+          enum: [add, delete, duplicate, merge, reorder, rename, visibility, opacity]
+        targetIndex:
+          type: integer
+          description: For reorder — destination index.
+        name:
+          type: string
+          description: For add/rename.
+        visible:
+          type: boolean
+          description: For visibility action.
+        opacity:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: For opacity action.
+
+    FrameRequest:
+      type: object
+      required: [sprite, action]
+      properties:
+        sprite:
+          $ref: '#/components/schemas/SpriteData'
+        action:
+          type: string
+          enum: [add, delete, duplicate]
+        frameIndex:
+          type: integer
+          minimum: 0
+          description: Target frame for delete/duplicate.
+        name:
+          type: string
+          description: Name for new frame (add action).
+
+    ResizeRequest:
+      type: object
+      required: [sprite, width, height]
+      properties:
+        sprite:
+          $ref: '#/components/schemas/SpriteData'
+        width:
+          type: integer
+          minimum: 1
+          maximum: 128
+        height:
+          type: integer
+          minimum: 1
+          maximum: 128

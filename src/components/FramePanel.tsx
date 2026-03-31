@@ -17,6 +17,8 @@ interface FramePanelProps {
   onDeleteFrame: (index: number) => void;
   onReorderFrame: (from: number, to: number) => void;
   onRenameFrame: (index: number, name: string) => void;
+  onCopyToNewSequence: () => void;
+  style?: React.CSSProperties;
 }
 
 const FrameThumbnail: React.FC<{
@@ -63,13 +65,18 @@ export const FramePanel: React.FC<FramePanelProps> = ({
   onDeleteFrame,
   onReorderFrame,
   onRenameFrame,
+  onCopyToNewSequence,
+  style,
 }) => {
   return (
-    <div className="frame-panel">
+    <div className="frame-panel" style={style}>
       <div className="frame-panel-header">
         <span className="panel-title">
           Sequences ({spriteSheet.sequences.length}) &middot; Frames ({spriteSheet.frames.length})
         </span>
+        <button className="frame-add-btn" onClick={onCopyToNewSequence} title="Copy current frame to a new sequence">
+          📋 Copy to Sequence
+        </button>
         <button className="frame-add-btn" onClick={onAddSequence}>
           + Sequence
         </button>
