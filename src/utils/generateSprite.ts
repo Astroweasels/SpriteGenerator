@@ -151,9 +151,9 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
     }
     const armTop = neckBot + 1;
     const armBot = Math.floor(size * 0.55);
-    const armW = Math.floor(size * 0.06);
+    const armW = Math.max(Math.floor(size * 0.06), 2);
     for (let y = armTop; y <= armBot; y++) {
-      const offset = torsoW + 1 + Math.floor((y - armTop) * 0.3);
+      const offset = torsoW + 2 + Math.floor((y - armTop) * 0.3);
       for (let dx = 0; dx <= armW; dx++) {
         const lx = cx - offset - dx;
         const rx = cx + offset + dx;
@@ -191,17 +191,18 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
       }
     }
     const torsoBot = Math.floor(size * 0.65);
-    const torsoW = Math.floor(size * 0.25);
+    const torsoW = Math.floor(size * 0.2);
     for (let y = neckBot; y <= torsoBot; y++) {
-      for (let x = cx - torsoW; x <= cx + torsoW; x++) {
+      const bulge = Math.floor(torsoW * (1 + 0.15 * Math.sin((y - neckBot) / (torsoBot - neckBot) * Math.PI)));
+      for (let x = cx - bulge; x <= cx + bulge; x++) {
         if (x >= 0 && x < size) grid[y][x] = true;
       }
     }
     const armTop = neckBot + 1;
     const armBot = Math.floor(size * 0.6);
-    const armW = Math.floor(size * 0.07);
+    const armW = Math.max(Math.floor(size * 0.07), 2);
     for (let y = armTop; y <= armBot; y++) {
-      const offset = torsoW + 1;
+      const offset = torsoW + 2 + Math.floor((y - armTop) * 0.2);
       for (let dx = 0; dx <= armW; dx++) {
         const lx = cx - offset - dx;
         const rx = cx + offset + dx;
@@ -248,9 +249,9 @@ function generateHumanoidBody(size: number, complexity: string): boolean[][] {
     }
     const armTop = neckBot + 1;
     const armBot = Math.floor(size * 0.52);
-    const armW = Math.floor(size * 0.04);
+    const armW = Math.max(Math.floor(size * 0.05), 2);
     for (let y = armTop; y <= armBot; y++) {
-      const offset = torsoW + 1 + Math.floor((y - armTop) * 0.4);
+      const offset = torsoW + 2 + Math.floor((y - armTop) * 0.4);
       for (let dx = 0; dx <= armW; dx++) {
         const lx = cx - offset - dx;
         const rx = cx + offset + dx;
