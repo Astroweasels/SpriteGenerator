@@ -179,6 +179,8 @@ servers:
         default: us-east-1
   - url: http://localhost:3001
     description: Local development
+  - url: https://astrosprite.com
+    description: Production
 
 paths:
   /generate:

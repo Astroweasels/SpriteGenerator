@@ -11,7 +11,7 @@ npm run build
 npm start
 ```
 
-The API runs at `http://localhost:3001`. Open `http://localhost:3001/docs` for interactive Swagger UI.
+The API runs at `https://astrosprite.com`. Open `https://astrosprite.com/docs` for interactive Swagger UI.
 
 ## Endpoints
 
@@ -108,7 +108,7 @@ Override individual body regions to match a character description. Each palette 
 ### Purple-robed mage with staff
 
 ```bash
-curl -X POST http://localhost:3001/generate \
+curl -X POST https://astrosprite.com/generate \
   -H "Content-Type: application/json" \
   -d '{
     "style": "humanoid",
@@ -130,7 +130,7 @@ curl -X POST http://localhost:3001/generate \
 ### Quick knight with all animations
 
 ```bash
-curl -X POST http://localhost:3001/generate \
+curl -X POST https://astrosprite.com/generate \
   -H "Content-Type: application/json" \
   -d '{
     "style": "humanoid",
@@ -144,7 +144,7 @@ curl -X POST http://localhost:3001/generate \
 ### Simple creature — no template
 
 ```bash
-curl -X POST http://localhost:3001/generate \
+curl -X POST https://astrosprite.com/generate \
   -H "Content-Type: application/json" \
   -d '{"style":"creature","size":32,"colorScheme":"neon","complexity":"complex"}'
 ```
