@@ -2,7 +2,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
-import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB } from './types.js';
+import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB, SpriteSheetManifest } from './types.js';
 import { generateRandomSprite, POSE_SEQUENCE_NAMES } from './generate.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';
 import { TEMPLATE_NAMES } from './templates.js';
@@ -250,6 +250,40 @@ export async function handler(
     );
     const sheetDataURI = `data:image/png;base64,${sheetPNG.toString('base64')}`;
 
+    // Build sprite sheet manifest (TexturePacker-compatible)
+    const fw = spriteSheet.width * scale;
+    const fh = spriteSheet.height * scale;
+    const cols = spriteSheet.frames.length;
+    const manifest: SpriteSheetManifest = {
+      frames: {},
+      animations: {},
+      meta: {
+        app: 'AstroSprite',
+        version: '1.0',
+        image: 'sprite_sheet.png',
+        format: 'RGBA8888',
+        size: { w: cols * fw, h: fh },
+        scale,
+      },
+    };
+
+    const sequenceData = buildSequences(spriteSheet.frames.map((f) => f.name));
+    spriteSheet.frames.forEach((frame, i) => {
+      const frameName = frame.name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+      manifest.frames[frameName] = {
+        frame: { x: i * fw, y: 0, w: fw, h: fh },
+        rotated: false,
+        trimmed: false,
+        spriteSourceSize: { x: 0, y: 0, w: fw, h: fh },
+        sourceSize: { w: fw, h: fh },
+      };
+    });
+    sequenceData.forEach(seq => {
+      manifest.animations[seq.name] = seq.frameIndices.map(
+        i => spriteSheet.frames[i].name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()
+      );
+    });
+
     // Optionally upload to S3
     let sheetUrl: string | undefined;
     if (S3_BUCKET) {
@@ -268,6 +302,7 @@ export async function handler(
       },
       frames: frameDataURIs,
       sheet: sheetDataURI,
+      manifest,
       ...(sheetUrl ? { sheetUrl } : {}),
     };
 

@@ -88,8 +88,29 @@ export interface GenerateResponse {
   frames: string[];
   /** Combined sprite sheet PNG as a base64 data URI */
   sheet: string;
+  /** TexturePacker-compatible JSON manifest for the sprite sheet */
+  manifest: SpriteSheetManifest;
   /** Pre-signed S3 URL for the sprite sheet (when S3 is configured) */
   sheetUrl?: string;
+}
+
+export interface SpriteSheetManifest {
+  frames: Record<string, {
+    frame: { x: number; y: number; w: number; h: number };
+    rotated: boolean;
+    trimmed: boolean;
+    spriteSourceSize: { x: number; y: number; w: number; h: number };
+    sourceSize: { w: number; h: number };
+  }>;
+  animations: Record<string, string[]>;
+  meta: {
+    app: string;
+    version: string;
+    image: string;
+    format: string;
+    size: { w: number; h: number };
+    scale: number;
+  };
 }
 
 export interface ErrorResponse {

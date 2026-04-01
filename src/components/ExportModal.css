@@ -86,3 +86,19 @@
   color: #aaaacc;
   font-family: 'Courier New', monospace;
 }
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #e0e0ff;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3355aa;
+  cursor: pointer;
+}

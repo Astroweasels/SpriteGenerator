@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { SpriteSheet } from '../types';
-import { exportFrameAsPNG, exportSpriteSheetAsPNG, downloadDataURL } from '../utils/exportUtils';
+import { exportFrameAsPNG, exportSpriteSheetAsPNG, exportSpriteSheetPack, downloadDataURL } from '../utils/exportUtils';
 import './ExportModal.css';
 
 interface ExportModalProps {
@@ -9,7 +9,7 @@ interface ExportModalProps {
   onClose: () => void;
 }
 
-type ExportTarget = 'current-frame' | 'all-frames' | 'sprite-sheet';
+type ExportTarget = 'current-frame' | 'all-frames' | 'sprite-sheet' | 'sprite-sheet-pack';
 
 export const ExportModal: React.FC<ExportModalProps> = ({
   spriteSheet,
@@ -20,6 +20,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [scale, setScale] = useState(1);
   const [columns, setColumns] = useState(spriteSheet.frames.length);
   const [fileName, setFileName] = useState('sprite');
+  const [perSequence, setPerSequence] = useState(true);
 
   const handleExport = () => {
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'sprite';
@@ -47,6 +48,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         downloadDataURL(dataURL, `${sanitizedName}_sheet.png`);
         break;
       }
+      case 'sprite-sheet-pack': {
+        exportSpriteSheetPack(spriteSheet, scale, columns, sanitizedName, perSequence);
+        break;
+      }
     }
     onClose();
   };
@@ -62,6 +67,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         const cols = Math.min(columns, spriteSheet.frames.length);
         const rows = Math.ceil(spriteSheet.frames.length / cols);
         return `${cols * spriteSheet.width * scale}×${rows * spriteSheet.height * scale}px (${cols}×${rows} grid)`;
+      }
+      case 'sprite-sheet-pack': {
+        if (perSequence) {
+          const seqCount = spriteSheet.sequences.length || 1;
+          return `PNG + JSON manifest (${seqCount} sequence${seqCount !== 1 ? 's' : ''}, grouped by row)`;
+        }
+        const cols = Math.min(columns, spriteSheet.frames.length);
+        const rows = Math.ceil(spriteSheet.frames.length / cols);
+        return `PNG + JSON manifest (${cols}×${rows} grid)`;
       }
     }
   };
@@ -110,6 +124,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 <span className="target-icon">📋</span>
                 <span>Sprite Sheet</span>
               </button>
+              <button
+                className={`export-target ${target === 'sprite-sheet-pack' ? 'active' : ''}`}
+                onClick={() => setTarget('sprite-sheet-pack')}
+              >
+                <span className="target-icon">📦</span>
+                <span>Sprite Sheet Pack (PNG + JSON)</span>
+              </button>
             </div>
           </div>
 
@@ -125,7 +146,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             />
           </div>
 
-          {target === 'sprite-sheet' && (
+          {target === 'sprite-sheet-pack' && (
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={perSequence}
+                  onChange={(e) => setPerSequence(e.target.checked)}
+                />
+                Organize by animation sequence (one row per sequence)
+              </label>
+            </div>
+          )}
+
+          {(target === 'sprite-sheet' || (target === 'sprite-sheet-pack' && !perSequence)) && (
             <div className="form-group">
               <label>Columns: {columns}</label>
               <input
@@ -148,7 +182,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={handleExport}>
-            📥 Download PNG
+            📥 {target === 'sprite-sheet-pack' ? 'Download Pack' : 'Download PNG'}
           </button>
         </div>
       </div>
