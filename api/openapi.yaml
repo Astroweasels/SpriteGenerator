@@ -880,6 +880,27 @@ components:
           description: Combined sprite sheet as a base64 data URI.
         manifest:
           $ref: '#/components/schemas/SpriteSheetManifest'
+        engineFormats:
+          type: object
+          description: |
+            Pre-rendered engine-specific format strings. Save the appropriate
+            string as a file alongside the sprite sheet PNG.
+          properties:
+            phaserAtlas:
+              type: string
+              description: |
+                Phaser 3 multi-atlas JSON. Save as `sprite_atlas.json` and load with
+                `this.load.atlas('sprite', 'sprite_sheet.png', 'sprite_atlas.json')`.
+            godotTres:
+              type: string
+              description: |
+                Godot 4 SpriteFrames `.tres` resource. Save as `sprite.tres` and
+                assign to an AnimatedSprite2D node. References `res://sprite_sheet.png`.
+            cssSpriteSheet:
+              type: string
+              description: |
+                CSS sprite sheet with background-position rules and @keyframes
+                animations. Save as `sprites.css` and include in your web page.
         sheetUrl:
           type: string
           format: uri

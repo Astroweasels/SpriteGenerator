@@ -139,13 +139,13 @@ function groupFramesBySequence(sheet: SpriteSheet): { name: string; frameIndices
   return Array.from(seqMap.entries()).map(([name, frameIndices]) => ({ name, frameIndices }));
 }
 
-export function exportSpriteSheetPack(
+function buildPackData(
   sheet: SpriteSheet,
   scale: number,
   columns: number,
   fileName: string,
   perSequence: boolean
-): void {
+): { pngDataURL: string; manifest: SpriteSheetManifest; sanitizedName: string } {
   const sanitizedName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'sprite';
   const sequences = groupFramesBySequence(sheet);
   const fw = sheet.width * scale;
@@ -231,13 +231,156 @@ export function exportSpriteSheetPack(
 
   manifest.meta.size = { w: sheetCanvas.width, h: sheetCanvas.height };
 
+  return { pngDataURL: sheetCanvas.toDataURL('image/png'), manifest, sanitizedName };
+}
+
+export type ExportFormat = 'generic' | 'phaser' | 'godot' | 'css';
+
+export function exportSpriteSheetPack(
+  sheet: SpriteSheet,
+  scale: number,
+  columns: number,
+  fileName: string,
+  perSequence: boolean,
+  format: ExportFormat = 'generic'
+): void {
+  const { pngDataURL, manifest, sanitizedName } = buildPackData(sheet, scale, columns, fileName, perSequence);
+
   // Download PNG
-  const pngDataURL = sheetCanvas.toDataURL('image/png');
   downloadDataURL(pngDataURL, `${sanitizedName}_sheet.png`);
 
-  // Download JSON manifest with slight delay to avoid browser blocking
+  // Download format-specific file(s)
   setTimeout(() => {
-    const jsonBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
-    downloadBlob(jsonBlob, `${sanitizedName}_sheet.json`);
+    switch (format) {
+      case 'phaser':
+        downloadFormatFile(buildPhaserAtlas(manifest, sanitizedName), `${sanitizedName}_atlas.json`);
+        break;
+      case 'godot':
+        downloadFormatFile(buildGodotSpriteFrames(manifest, sanitizedName), `${sanitizedName}.tres`);
+        break;
+      case 'css':
+        downloadFormatFile(buildCssSpriteSheet(manifest, sanitizedName), `${sanitizedName}_sprites.css`);
+        break;
+      default:
+        downloadFormatFile(JSON.stringify(manifest, null, 2), `${sanitizedName}_sheet.json`);
+        break;
+    }
   }, 100);
+}
+
+function downloadFormatFile(content: string, filename: string): void {
+  const blob = new Blob([content], { type: 'text/plain' });
+  downloadBlob(blob, filename);
+}
+
+function buildPhaserAtlas(manifest: SpriteSheetManifest, name: string): string {
+  const atlas = {
+    textures: [{
+      image: `${name}_sheet.png`,
+      format: manifest.meta.format,
+      size: manifest.meta.size,
+      scale: manifest.meta.scale,
+      frames: Object.entries(manifest.frames).map(([filename, data]) => ({
+        filename,
+        frame: data.frame,
+        rotated: data.rotated,
+        trimmed: data.trimmed,
+        spriteSourceSize: data.spriteSourceSize,
+        sourceSize: data.sourceSize,
+      })),
+    }],
+    meta: {
+      app: 'AstroSprite',
+      version: '1.0',
+    },
+  };
+  return JSON.stringify(atlas, null, 2);
+}
+
+function buildGodotSpriteFrames(manifest: SpriteSheetManifest, name: string): string {
+  const animations = Object.entries(manifest.animations);
+  const texturePath = `res://${name}_sheet.png`;
+
+  let tres = `[gd_resource type="SpriteFrames" load_steps=${animations.length + 2} format=3]\n\n`;
+  tres += `[ext_resource type="Texture2D" path="${texturePath}" id="1"]\n\n`;
+
+  // Build AtlasTexture sub-resources for each frame
+  let subId = 1;
+  const frameSubIds: Record<string, number> = {};
+  for (const [frameName, data] of Object.entries(manifest.frames)) {
+    subId++;
+    frameSubIds[frameName] = subId;
+    const { x, y, w, h } = data.frame;
+    tres += `[sub_resource type="AtlasTexture" id="${subId}"]\n`;
+    tres += `atlas = ExtResource("1")\n`;
+    tres += `region = Rect2(${x}, ${y}, ${w}, ${h})\n\n`;
+  }
+
+  // Build the SpriteFrames resource
+  tres += `[resource]\n`;
+  tres += `animations = [`;
+
+  animations.forEach(([seqName, frameNames], idx) => {
+    if (idx > 0) tres += `, `;
+    tres += `{\n`;
+    tres += `"loop": true,\n`;
+    tres += `"name": &"${seqName}",\n`;
+    tres += `"speed": 8.0,\n`;
+    tres += `"frames": [`;
+    frameNames.forEach((fn, fi) => {
+      if (fi > 0) tres += `, `;
+      const sid = frameSubIds[fn];
+      if (sid) {
+        tres += `{\n"duration": 1.0,\n"texture": SubResource("${sid}")\n}`;
+      }
+    });
+    tres += `]\n}`;
+  });
+
+  tres += `]\n`;
+  return tres;
+}
+
+function buildCssSpriteSheet(manifest: SpriteSheetManifest, name: string): string {
+  const { w, h } = manifest.meta.size;
+  let css = `/* AstroSprite CSS Sprite Sheet */\n`;
+  css += `/* Image: ${name}_sheet.png (${w}x${h}) */\n\n`;
+
+  css += `.${name}-sprite {\n`;
+  css += `  background-image: url('${name}_sheet.png');\n`;
+  css += `  background-repeat: no-repeat;\n`;
+  css += `  display: inline-block;\n`;
+  css += `}\n\n`;
+
+  for (const [frameName, data] of Object.entries(manifest.frames)) {
+    const { x, y, w: fw, h: fh } = data.frame;
+    css += `.${name}-${frameName} {\n`;
+    css += `  width: ${fw}px;\n`;
+    css += `  height: ${fh}px;\n`;
+    css += `  background-position: -${x}px -${y}px;\n`;
+    css += `}\n\n`;
+  }
+
+  // Add keyframe animations for each sequence
+  for (const [seqName, frameNames] of Object.entries(manifest.animations)) {
+    if (frameNames.length < 2) continue;
+    const safeSeqName = seqName.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+    const stepPercent = 100 / frameNames.length;
+
+    css += `@keyframes ${name}-${safeSeqName} {\n`;
+    frameNames.forEach((fn, i) => {
+      const data = manifest.frames[fn];
+      if (!data) return;
+      const pct = Math.round(i * stepPercent);
+      css += `  ${pct}% { background-position: -${data.frame.x}px -${data.frame.y}px; }\n`;
+    });
+    css += `  100% { background-position: -${manifest.frames[frameNames[0]].frame.x}px -${manifest.frames[frameNames[0]].frame.y}px; }\n`;
+    css += `}\n\n`;
+
+    css += `.${name}-anim-${safeSeqName} {\n`;
+    css += `  animation: ${name}-${safeSeqName} ${frameNames.length * 0.15}s steps(1) infinite;\n`;
+    css += `}\n\n`;
+  }
+
+  return css;
 }

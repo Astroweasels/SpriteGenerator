@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { SpriteSheet } from '../types';
 import { exportFrameAsPNG, exportSpriteSheetAsPNG, exportSpriteSheetPack, downloadDataURL } from '../utils/exportUtils';
+import type { ExportFormat } from '../utils/exportUtils';
 import './ExportModal.css';
 
 interface ExportModalProps {
@@ -21,6 +22,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [columns, setColumns] = useState(spriteSheet.frames.length);
   const [fileName, setFileName] = useState('sprite');
   const [perSequence, setPerSequence] = useState(true);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('generic');
 
   const handleExport = () => {
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'sprite';
@@ -49,7 +51,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         break;
       }
       case 'sprite-sheet-pack': {
-        exportSpriteSheetPack(spriteSheet, scale, columns, sanitizedName, perSequence);
+        exportSpriteSheetPack(spriteSheet, scale, columns, sanitizedName, perSequence, exportFormat);
         break;
       }
     }
@@ -69,13 +71,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         return `${cols * spriteSheet.width * scale}×${rows * spriteSheet.height * scale}px (${cols}×${rows} grid)`;
       }
       case 'sprite-sheet-pack': {
+        const formatLabel = { generic: 'JSON manifest', phaser: 'Phaser 3 Atlas JSON', godot: 'Godot .tres', css: 'CSS Sprite Sheet' }[exportFormat];
         if (perSequence) {
           const seqCount = spriteSheet.sequences.length || 1;
-          return `PNG + JSON manifest (${seqCount} sequence${seqCount !== 1 ? 's' : ''}, grouped by row)`;
+          return `PNG + ${formatLabel} (${seqCount} sequence${seqCount !== 1 ? 's' : ''}, grouped by row)`;
         }
         const cols = Math.min(columns, spriteSheet.frames.length);
         const rows = Math.ceil(spriteSheet.frames.length / cols);
-        return `PNG + JSON manifest (${cols}×${rows} grid)`;
+        return `PNG + ${formatLabel} (${cols}×${rows} grid)`;
       }
     }
   };
@@ -156,6 +159,46 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 />
                 Organize by animation sequence (one row per sequence)
               </label>
+            </div>
+          )}
+
+          {target === 'sprite-sheet-pack' && (
+            <div className="form-group">
+              <label>Engine Format</label>
+              <div className="format-grid">
+                <button
+                  className={`format-btn ${exportFormat === 'generic' ? 'active' : ''}`}
+                  onClick={() => setExportFormat('generic')}
+                >
+                  <span className="format-icon">📄</span>
+                  <span className="format-label">Generic JSON</span>
+                  <span className="format-desc">TexturePacker compatible</span>
+                </button>
+                <button
+                  className={`format-btn ${exportFormat === 'phaser' ? 'active' : ''}`}
+                  onClick={() => setExportFormat('phaser')}
+                >
+                  <span className="format-icon">⚡</span>
+                  <span className="format-label">Phaser 3</span>
+                  <span className="format-desc">Multi-atlas JSON</span>
+                </button>
+                <button
+                  className={`format-btn ${exportFormat === 'godot' ? 'active' : ''}`}
+                  onClick={() => setExportFormat('godot')}
+                >
+                  <span className="format-icon">🤖</span>
+                  <span className="format-label">Godot 4</span>
+                  <span className="format-desc">SpriteFrames .tres</span>
+                </button>
+                <button
+                  className={`format-btn ${exportFormat === 'css' ? 'active' : ''}`}
+                  onClick={() => setExportFormat('css')}
+                >
+                  <span className="format-icon">🎨</span>
+                  <span className="format-label">CSS Sprites</span>
+                  <span className="format-desc">Web animations</span>
+                </button>
+              </div>
             </div>
           )}
 

@@ -184,6 +184,11 @@ curl -X POST http://localhost:3001/generate \
     },
     "meta": { "app": "AstroSprite", "version": "1.0", "image": "sprite_sheet.png", "format": "RGBA8888", "size": {"w":512,"h":64}, "scale": 2 }
   },
+  "engineFormats": {
+    "phaserAtlas": "{ \"textures\": [{ \"image\": \"sprite_sheet.png\", ... }] }",
+    "godotTres": "[gd_resource type=\"SpriteFrames\" ...] ...",
+    "cssSpriteSheet": ".sprite-sprite { background-image: url('sprite_sheet.png'); ... }"
+  },
   "sheetUrl": "https://spriteforge-sprites.s3.amazonaws.com/sprites/abc.png?..."
 }
 ```
@@ -191,6 +196,10 @@ curl -X POST http://localhost:3001/generate \
 - **`frames`**: Each animation frame as a base64 PNG data URI.
 - **`sheet`**: All frames in a horizontal strip (data URI).
 - **`manifest`**: TexturePacker-compatible JSON manifest. Save alongside the sheet PNG and import directly into Phaser, PixiJS, Godot, or any engine that reads this format.
+- **`engineFormats`**: Pre-rendered format strings for specific engines:
+  - `phaserAtlas` — Phaser 3 multi-atlas JSON. Save as `.json`, load with `this.load.atlas()`.
+  - `godotTres` — Godot 4 SpriteFrames `.tres`. Save as `.tres`, assign to an `AnimatedSprite2D`.
+  - `cssSpriteSheet` — CSS with background-position rules and `@keyframes` animations for web.
 - **`sequences`**: Maps animation names to indices in the `frames` array. Use this to split frames into individual animations in your game engine.
 - **`sheetUrl`**: Pre-signed S3 URL (15 min expiry). Only present when deployed to AWS with S3 configured.
 
@@ -203,10 +212,35 @@ fs.writeFileSync('idle_1.png', Buffer.from(base64, 'base64'));
 
 ### Using in a game engine
 
-1. Save the `sheet` as a PNG file and the `manifest` as a JSON file in the same directory
-2. Import the JSON manifest directly — Phaser (`this.load.atlas()`), PixiJS (`Assets.load()`), and Godot importers all support this format
-3. The `animations` field in the manifest maps sequence names to frame names for easy animation setup
-4. Alternatively, use the `sequences` array and individual `frames` to handle it manually
+**Phaser 3:**
+```js
+// Save engineFormats.phaserAtlas as sprite_atlas.json
+// Save sheet PNG as sprite_sheet.png
+this.load.atlas('hero', 'sprite_sheet.png', 'sprite_atlas.json');
+// Then create animations from the atlas frames
+```
+
+**Godot 4:**
+```
+# Save engineFormats.godotTres as hero.tres
+# Save sheet PNG as hero_sheet.png in your project
+# Assign hero.tres to an AnimatedSprite2D's sprite_frames property
+# All animations (Idle, Walk, Attack, etc.) are pre-configured
+```
+
+**CSS / Web:**
+```html
+<!-- Save engineFormats.cssSpriteSheet as sprites.css -->
+<link rel="stylesheet" href="sprites.css">
+<div class="sprite-sprite sprite-idle_1"></div>
+<!-- Or use animated: -->
+<div class="sprite-sprite sprite-anim-walk"></div>
+```
+
+**Generic (any engine):**
+1. Save the `manifest` JSON and `sheet` PNG in the same directory
+2. The `animations` field maps sequence names to frame names
+3. Each frame's `x, y, w, h` tells you where to crop from the sheet
 
 ---
 

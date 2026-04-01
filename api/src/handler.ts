@@ -171,6 +171,89 @@ function buildSequences(frameNames: string[]): { name: string; frameIndices: num
   return Array.from(seqMap.entries()).map(([name, frameIndices]) => ({ name, frameIndices }));
 }
 
+// ---- Engine format builders ----
+
+function buildPhaserAtlas(manifest: SpriteSheetManifest, name: string): string {
+  const atlas = {
+    textures: [{
+      image: `${name}_sheet.png`,
+      format: manifest.meta.format,
+      size: manifest.meta.size,
+      scale: manifest.meta.scale,
+      frames: Object.entries(manifest.frames).map(([filename, data]) => ({
+        filename,
+        frame: data.frame,
+        rotated: data.rotated,
+        trimmed: data.trimmed,
+        spriteSourceSize: data.spriteSourceSize,
+        sourceSize: data.sourceSize,
+      })),
+    }],
+    meta: { app: 'AstroSprite', version: '1.0' },
+  };
+  return JSON.stringify(atlas, null, 2);
+}
+
+function buildGodotSpriteFrames(manifest: SpriteSheetManifest, name: string): string {
+  const animations = Object.entries(manifest.animations);
+  const texturePath = `res://${name}_sheet.png`;
+
+  let tres = `[gd_resource type="SpriteFrames" load_steps=${animations.length + 2} format=3]\n\n`;
+  tres += `[ext_resource type="Texture2D" path="${texturePath}" id="1"]\n\n`;
+
+  let subId = 1;
+  const frameSubIds: Record<string, number> = {};
+  for (const [frameName, data] of Object.entries(manifest.frames)) {
+    subId++;
+    frameSubIds[frameName] = subId;
+    const { x, y, w, h } = data.frame;
+    tres += `[sub_resource type="AtlasTexture" id="${subId}"]\n`;
+    tres += `atlas = ExtResource("1")\n`;
+    tres += `region = Rect2(${x}, ${y}, ${w}, ${h})\n\n`;
+  }
+
+  tres += `[resource]\nanimations = [`;
+  animations.forEach(([seqName, frameNames], idx) => {
+    if (idx > 0) tres += `, `;
+    tres += `{\n"loop": true,\n"name": &"${seqName}",\n"speed": 8.0,\n"frames": [`;
+    frameNames.forEach((fn, fi) => {
+      if (fi > 0) tres += `, `;
+      const sid = frameSubIds[fn];
+      if (sid) tres += `{\n"duration": 1.0,\n"texture": SubResource("${sid}")\n}`;
+    });
+    tres += `]\n}`;
+  });
+  tres += `]\n`;
+  return tres;
+}
+
+function buildCssSpriteSheet(manifest: SpriteSheetManifest, name: string): string {
+  const { w, h } = manifest.meta.size;
+  let css = `/* AstroSprite CSS Sprite Sheet */\n/* Image: ${name}_sheet.png (${w}x${h}) */\n\n`;
+  css += `.${name}-sprite {\n  background-image: url('${name}_sheet.png');\n  background-repeat: no-repeat;\n  display: inline-block;\n}\n\n`;
+
+  for (const [frameName, data] of Object.entries(manifest.frames)) {
+    const { x, y, w: fw, h: fh } = data.frame;
+    css += `.${name}-${frameName} { width: ${fw}px; height: ${fh}px; background-position: -${x}px -${y}px; }\n`;
+  }
+  css += `\n`;
+
+  for (const [seqName, frameNames] of Object.entries(manifest.animations)) {
+    if (frameNames.length < 2) continue;
+    const safeSeqName = seqName.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+    const stepPercent = 100 / frameNames.length;
+    css += `@keyframes ${name}-${safeSeqName} {\n`;
+    frameNames.forEach((fn, i) => {
+      const data = manifest.frames[fn];
+      if (!data) return;
+      css += `  ${Math.round(i * stepPercent)}% { background-position: -${data.frame.x}px -${data.frame.y}px; }\n`;
+    });
+    css += `  100% { background-position: -${manifest.frames[frameNames[0]].frame.x}px -${manifest.frames[frameNames[0]].frame.y}px; }\n}\n`;
+    css += `.${name}-anim-${safeSeqName} { animation: ${name}-${safeSeqName} ${frameNames.length * 0.15}s steps(1) infinite; }\n\n`;
+  }
+  return css;
+}
+
 // ---- Lambda handler ----
 
 export async function handler(
@@ -303,6 +386,11 @@ export async function handler(
       frames: frameDataURIs,
       sheet: sheetDataURI,
       manifest,
+      engineFormats: {
+        phaserAtlas: buildPhaserAtlas(manifest, 'sprite'),
+        godotTres: buildGodotSpriteFrames(manifest, 'sprite'),
+        cssSpriteSheet: buildCssSpriteSheet(manifest, 'sprite'),
+      },
       ...(sheetUrl ? { sheetUrl } : {}),
     };
 

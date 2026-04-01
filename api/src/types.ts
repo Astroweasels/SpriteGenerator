@@ -90,6 +90,15 @@ export interface GenerateResponse {
   sheet: string;
   /** TexturePacker-compatible JSON manifest for the sprite sheet */
   manifest: SpriteSheetManifest;
+  /** Pre-rendered engine-specific format strings */
+  engineFormats: {
+    /** Phaser 3 multi-atlas JSON — save as .json and load with this.load.atlas() */
+    phaserAtlas: string;
+    /** Godot 4 SpriteFrames resource — save as .tres and use with AnimatedSprite2D */
+    godotTres: string;
+    /** CSS sprite sheet with keyframe animations — save as .css */
+    cssSpriteSheet: string;
+  };
   /** Pre-signed S3 URL for the sprite sheet (when S3 is configured) */
   sheetUrl?: string;
 }
