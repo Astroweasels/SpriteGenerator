@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { SpriteFrame, SpriteSheet } from '../types';
 import { renderFrameToCanvas } from '../utils/exportUtils';
 import './FramePanel.css';
@@ -15,7 +15,7 @@ interface FramePanelProps {
   onRenameSequence: (sequenceId: string, name: string) => void;
   onDuplicateFrame: (index: number) => void;
   onDeleteFrame: (index: number) => void;
-  onReorderFrame: (from: number, to: number) => void;
+  onReorderFrameInSequence: (sequenceId: string, fromPos: number, toPos: number) => void;
   onRenameFrame: (index: number, name: string) => void;
   onCopyToNewSequence: () => void;
   style?: React.CSSProperties;
@@ -63,11 +63,15 @@ export const FramePanel: React.FC<FramePanelProps> = ({
   onRenameSequence,
   onDuplicateFrame,
   onDeleteFrame,
-  onReorderFrame,
+  onReorderFrameInSequence,
   onRenameFrame,
   onCopyToNewSequence,
   style,
 }) => {
+  const [dragSeqId, setDragSeqId] = useState<string | null>(null);
+  const [dragPos, setDragPos] = useState<number | null>(null);
+  const [dropPos, setDropPos] = useState<number | null>(null);
+
   return (
     <div className="frame-panel" style={style}>
       <div className="frame-panel-header">
@@ -122,10 +126,44 @@ export const FramePanel: React.FC<FramePanelProps> = ({
               </div>
 
               <div className="frame-list">
-                {seqFrames.map(({ frame, index }) => (
+                {seqFrames.map(({ frame, index }, posInSeq) => (
                   <div
                     key={frame.id}
-                    className={`frame-item ${index === activeFrameIndex ? 'active' : ''}`}
+                    className={`frame-item ${index === activeFrameIndex ? 'active' : ''} ${dragSeqId === seq.id && dragPos === posInSeq ? 'dragging' : ''} ${dragSeqId === seq.id && dropPos === posInSeq ? 'drop-target' : ''}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      setDragSeqId(seq.id);
+                      setDragPos(posInSeq);
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', '');
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (dragSeqId === seq.id) {
+                        e.dataTransfer.dropEffect = 'move';
+                        setDropPos(posInSeq);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      setDropPos(prev => prev === posInSeq ? null : prev);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (dragSeqId === seq.id && dragPos !== null && dragPos !== posInSeq) {
+                        onReorderFrameInSequence(seq.id, dragPos, posInSeq);
+                      }
+                      setDragSeqId(null);
+                      setDragPos(null);
+                      setDropPos(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragSeqId(null);
+                      setDragPos(null);
+                      setDropPos(null);
+                    }}
                     onClick={(e) => { e.stopPropagation(); onSelectSequence(seq.id); onSelectFrame(index); }}
                   >
                     <FrameThumbnail
@@ -141,17 +179,17 @@ export const FramePanel: React.FC<FramePanelProps> = ({
                         onChange={(e) => onRenameFrame(index, e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <span className="frame-index">#{index + 1}</span>
+                      <span className="frame-index">#{posInSeq + 1}</span>
                     </div>
                     <div className="frame-actions">
                       <button
-                        onClick={(e) => { e.stopPropagation(); onReorderFrame(index, index - 1); }}
-                        disabled={index === 0}
+                        onClick={(e) => { e.stopPropagation(); onReorderFrameInSequence(seq.id, posInSeq, posInSeq - 1); }}
+                        disabled={posInSeq === 0}
                         title="Move Left"
                       >◀</button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); onReorderFrame(index, index + 1); }}
-                        disabled={index === spriteSheet.frames.length - 1}
+                        onClick={(e) => { e.stopPropagation(); onReorderFrameInSequence(seq.id, posInSeq, posInSeq + 1); }}
+                        disabled={posInSeq === seqFrames.length - 1}
                         title="Move Right"
                       >▶</button>
                       <button

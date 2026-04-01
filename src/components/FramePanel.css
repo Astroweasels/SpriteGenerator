@@ -141,6 +141,18 @@
   border-color: #333355;
 }
 
+.frame-item.dragging {
+  opacity: 0.4;
+  border-color: #3355aa;
+  border-style: dashed;
+}
+
+.frame-item.drop-target {
+  border-color: #55aaff;
+  background: rgba(85, 170, 255, 0.15);
+  box-shadow: 0 0 8px rgba(85, 170, 255, 0.3);
+}
+
 .frame-item.active {
   border-color: #3355aa;
   background: rgba(51, 85, 170, 0.2);

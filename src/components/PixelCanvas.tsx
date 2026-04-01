@@ -12,6 +12,19 @@ import {
 } from '../utils/spriteUtils';
 import './PixelCanvas.css';
 
+interface Selection {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+interface ClipboardData {
+  pixels: Map<string, Color>;
+  w: number;
+  h: number;
+}
+
 interface PixelCanvasProps {
   frame: SpriteFrame;
   width: number;
@@ -53,6 +66,16 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
   const [startPos, setStartPos] = useState<[number, number] | null>(null);
   const [previewPixels, setPreviewPixels] = useState<[number, number][]>([]);
   const colorCycleIndexRef = useRef(0);
+
+  // Selection state
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selectionPreview, setSelectionPreview] = useState<Selection | null>(null);
+  const [clipboard, setClipboard] = useState<ClipboardData | null>(null);
+  const [floatingPixels, setFloatingPixels] = useState<Map<string, Color> | null>(null);
+  const [floatingOffset, setFloatingOffset] = useState<[number, number]>([0, 0]);
+  const [moveStart, setMoveStart] = useState<[number, number] | null>(null);
+  const marchOffsetRef = useRef(0);
+  const marchAnimRef = useRef<number>(0);
 
   const pixelSize = zoom;
   const canvasWidth = width * pixelSize;
@@ -125,7 +148,41 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         ctx.stroke();
       }
     }
-  }, [frame, width, height, pixelSize, canvasWidth, canvasHeight, gridVisible, previewPixels, currentColor]);
+
+    // Draw floating pixels (being moved)
+    if (floatingPixels) {
+      for (const [key, color] of floatingPixels) {
+        if (color.a === 0) continue;
+        const [fx, fy] = key.split(',').map(Number);
+        const wx = fx + floatingOffset[0];
+        const wy = fy + floatingOffset[1];
+        if (wx >= 0 && wx < width && wy >= 0 && wy < height) {
+          ctx.fillStyle = colorToCSS(color);
+          ctx.fillRect(wx * pixelSize, wy * pixelSize, pixelSize, pixelSize);
+        }
+      }
+    }
+
+    // Draw selection rectangle (marching ants)
+    const sel = selectionPreview || selection;
+    if (sel) {
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(
+        sel.x * pixelSize + 0.5, sel.y * pixelSize + 0.5,
+        sel.w * pixelSize - 1, sel.h * pixelSize - 1
+      );
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -marchOffsetRef.current;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(
+        sel.x * pixelSize + 0.5, sel.y * pixelSize + 0.5,
+        sel.w * pixelSize - 1, sel.h * pixelSize - 1
+      );
+      ctx.restore();
+    }
+  }, [frame, width, height, pixelSize, canvasWidth, canvasHeight, gridVisible, previewPixels, currentColor, selection, selectionPreview, floatingPixels, floatingOffset]);
 
   useEffect(() => {
     draw();
@@ -139,6 +196,22 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     }
     return currentColor;
   }, [colorCycleEnabled, colorCycleColors, currentColor]);
+
+  const commitFloating = useCallback(() => {
+    if (!floatingPixels || !activeLayer) return;
+    const newPixels = new Map(activeLayer.pixels);
+    for (const [key, color] of floatingPixels) {
+      const [fx, fy] = key.split(',').map(Number);
+      const nx = fx + floatingOffset[0];
+      const ny = fy + floatingOffset[1];
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+        newPixels.set(pixelKey(nx, ny), color);
+      }
+    }
+    onPixelsChanged(activeLayer.id, newPixels);
+    setFloatingPixels(null);
+    setFloatingOffset([0, 0]);
+  }, [floatingPixels, floatingOffset, activeLayer, width, height, onPixelsChanged]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!activeLayer) return;
@@ -192,6 +265,38 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       case 'circle':
         setStartPos([x, y]);
         break;
+      case 'select': {
+        commitFloating();
+        setSelection(null);
+        setSelectionPreview(null);
+        setStartPos([x, y]);
+        break;
+      }
+      case 'move': {
+        if (selection && !floatingPixels) {
+          const lifted = new Map<string, Color>();
+          const newPixels = new Map(activeLayer.pixels);
+          for (let sy = selection.y; sy < selection.y + selection.h; sy++) {
+            for (let sx = selection.x; sx < selection.x + selection.w; sx++) {
+              const key = pixelKey(sx, sy);
+              const c = activeLayer.pixels.get(key);
+              if (c) {
+                lifted.set(pixelKey(sx - selection.x, sy - selection.y), c);
+                newPixels.delete(key);
+              }
+            }
+          }
+          if (lifted.size > 0) {
+            onPixelsChanged(activeLayer.id, newPixels);
+            setFloatingPixels(lifted);
+            setFloatingOffset([selection.x, selection.y]);
+          }
+        }
+        if (selection) {
+          setMoveStart([x, y]);
+        }
+        break;
+      }
     }
   };
 
@@ -250,6 +355,28 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
         }
         break;
       }
+      case 'select': {
+        if (startPos) {
+          const sx = Math.min(startPos[0], x);
+          const sy = Math.min(startPos[1], y);
+          const ex = Math.max(startPos[0], x);
+          const ey = Math.max(startPos[1], y);
+          setSelectionPreview({ x: sx, y: sy, w: ex - sx + 1, h: ey - sy + 1 });
+        }
+        break;
+      }
+      case 'move': {
+        if (moveStart && floatingPixels && selection) {
+          const dx = x - moveStart[0];
+          const dy = y - moveStart[1];
+          if (dx !== 0 || dy !== 0) {
+            setFloatingOffset(prev => [prev[0] + dx, prev[1] + dy]);
+            setSelection(prev => prev ? { ...prev, x: prev.x + dx, y: prev.y + dy } : null);
+            setMoveStart([x, y]);
+          }
+        }
+        break;
+      }
     }
   };
 
@@ -285,6 +412,23 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       onPixelsChanged(activeLayer.id, newPixels);
     }
 
+    // Select tool finalization
+    if (currentTool === 'select' && startPos) {
+      const sx = Math.min(startPos[0], x);
+      const sy = Math.min(startPos[1], y);
+      const ex = Math.max(startPos[0], x);
+      const ey = Math.max(startPos[1], y);
+      if (ex > sx || ey > sy) {
+        setSelection({ x: sx, y: sy, w: ex - sx + 1, h: ey - sy + 1 });
+      }
+      setSelectionPreview(null);
+    }
+
+    // Move tool finalization
+    if (currentTool === 'move') {
+      setMoveStart(null);
+    }
+
     setIsDrawing(false);
     setStartPos(null);
     setPreviewPixels([]);
@@ -299,6 +443,153 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     },
     [zoom, onZoomChange]
   );
+
+  // Marching ants animation
+  useEffect(() => {
+    if (!selection && !selectionPreview) return;
+    const id = setInterval(() => {
+      marchOffsetRef.current = (marchOffsetRef.current + 1) % 8;
+      draw();
+    }, 150);
+    return () => clearInterval(id);
+  }, [selection, selectionPreview, draw]);
+
+  // Commit floating pixels when switching away from select/move
+  useEffect(() => {
+    if (currentTool !== 'select' && currentTool !== 'move') {
+      commitFloating();
+      setSelection(null);
+      setSelectionPreview(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTool]);
+
+  // Keyboard shortcuts for selection operations
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!activeLayer) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      // Ctrl+C: Copy selection
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selection) {
+        e.preventDefault();
+        if (floatingPixels) {
+          setClipboard({ pixels: new Map(floatingPixels), w: selection.w, h: selection.h });
+        } else {
+          const copied = new Map<string, Color>();
+          for (let sy = selection.y; sy < selection.y + selection.h; sy++) {
+            for (let sx = selection.x; sx < selection.x + selection.w; sx++) {
+              const c = activeLayer.pixels.get(pixelKey(sx, sy));
+              if (c) copied.set(pixelKey(sx - selection.x, sy - selection.y), c);
+            }
+          }
+          setClipboard({ pixels: copied, w: selection.w, h: selection.h });
+        }
+        return;
+      }
+
+      // Ctrl+X: Cut selection
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x' && selection) {
+        e.preventDefault();
+        onSaveUndo?.();
+        if (floatingPixels) {
+          setClipboard({ pixels: new Map(floatingPixels), w: selection.w, h: selection.h });
+          setFloatingPixels(null);
+          setFloatingOffset([0, 0]);
+        } else {
+          const copied = new Map<string, Color>();
+          const newPixels = new Map(activeLayer.pixels);
+          for (let sy = selection.y; sy < selection.y + selection.h; sy++) {
+            for (let sx = selection.x; sx < selection.x + selection.w; sx++) {
+              const key = pixelKey(sx, sy);
+              const c = activeLayer.pixels.get(key);
+              if (c) {
+                copied.set(pixelKey(sx - selection.x, sy - selection.y), c);
+                newPixels.delete(key);
+              }
+            }
+          }
+          onPixelsChanged(activeLayer.id, newPixels);
+          setClipboard({ pixels: copied, w: selection.w, h: selection.h });
+        }
+        setSelection(null);
+        return;
+      }
+
+      // Ctrl+V: Paste (only in select/move mode)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard && (currentTool === 'select' || currentTool === 'move')) {
+        e.preventDefault();
+        onSaveUndo?.();
+        commitFloating();
+        setFloatingPixels(new Map(clipboard.pixels));
+        setFloatingOffset([0, 0]);
+        setSelection({ x: 0, y: 0, w: clipboard.w, h: clipboard.h });
+        return;
+      }
+
+      // Delete: clear selected pixels
+      if (e.key === 'Delete' && selection) {
+        e.preventDefault();
+        onSaveUndo?.();
+        if (floatingPixels) {
+          setFloatingPixels(null);
+          setFloatingOffset([0, 0]);
+        } else {
+          const newPixels = new Map(activeLayer.pixels);
+          for (let sy = selection.y; sy < selection.y + selection.h; sy++) {
+            for (let sx = selection.x; sx < selection.x + selection.w; sx++) {
+              newPixels.delete(pixelKey(sx, sy));
+            }
+          }
+          onPixelsChanged(activeLayer.id, newPixels);
+        }
+        setSelection(null);
+        return;
+      }
+
+      // Escape: deselect
+      if (e.key === 'Escape') {
+        commitFloating();
+        setSelection(null);
+        setSelectionPreview(null);
+        return;
+      }
+
+      // Arrow keys: nudge selection
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selection) {
+        e.preventDefault();
+        const dx = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+        const dy = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+        if (!floatingPixels) {
+          onSaveUndo?.();
+          const lifted = new Map<string, Color>();
+          const newPixels = new Map(activeLayer.pixels);
+          for (let sy = selection.y; sy < selection.y + selection.h; sy++) {
+            for (let sx = selection.x; sx < selection.x + selection.w; sx++) {
+              const key = pixelKey(sx, sy);
+              const c = activeLayer.pixels.get(key);
+              if (c) {
+                lifted.set(pixelKey(sx - selection.x, sy - selection.y), c);
+                newPixels.delete(key);
+              }
+            }
+          }
+          onPixelsChanged(activeLayer.id, newPixels);
+          setFloatingPixels(lifted);
+          setFloatingOffset([selection.x + dx, selection.y + dy]);
+          setSelection({ ...selection, x: selection.x + dx, y: selection.y + dy });
+        } else {
+          setFloatingOffset(prev => [prev[0] + dx, prev[1] + dy]);
+          setSelection(prev => prev ? { ...prev, x: prev.x + dx, y: prev.y + dy } : null);
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeLayer, selection, clipboard, floatingPixels, floatingOffset, commitFloating, onPixelsChanged, onSaveUndo, currentTool, width, height]);
 
   return (
     <div className="pixel-canvas-wrapper">
@@ -315,6 +606,8 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
           setIsDrawing(false);
           setStartPos(null);
           setPreviewPixels([]);
+          setSelectionPreview(null);
+          setMoveStart(null);
         }}
         onContextMenu={(e) => e.preventDefault()}
       />

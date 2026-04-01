@@ -152,6 +152,8 @@ function App() {
       else if (e.key === 'l' || e.key === 'L') setCurrentTool('line');
       else if (e.key === 'r' || e.key === 'R') setCurrentTool('rect');
       else if (e.key === 'c' || e.key === 'C') setCurrentTool('circle');
+      else if (e.key === 's' || e.key === 'S') setCurrentTool('select');
+      else if (e.key === 'm' || e.key === 'M') setCurrentTool('move');
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -338,13 +340,24 @@ function App() {
     setActiveFrameIndex(Math.min(activeFrameIndex, newFrames.length - 1));
   };
 
-  const handleReorderFrame = (from: number, to: number) => {
-    if (to < 0 || to >= spriteSheet.frames.length) return;
-    const newFrames = [...spriteSheet.frames];
-    const [moved] = newFrames.splice(from, 1);
-    newFrames.splice(to, 0, moved);
-    setSpriteSheet(ss => ({ ...ss, frames: newFrames }));
-    setActiveFrameIndex(to);
+  const handleReorderFrameInSequence = (sequenceId: string, fromPos: number, toPos: number) => {
+    setSpriteSheet(ss => {
+      const seq = ss.sequences.find(s => s.id === sequenceId);
+      if (!seq) return ss;
+      if (toPos < 0 || toPos >= seq.frameIds.length) return ss;
+      const newFrameIds = [...seq.frameIds];
+      const [moved] = newFrameIds.splice(fromPos, 1);
+      newFrameIds.splice(toPos, 0, moved);
+      // Update active frame index to follow the moved frame
+      const movedGlobalIndex = ss.frames.findIndex(f => f.id === moved);
+      if (movedGlobalIndex >= 0) setActiveFrameIndex(movedGlobalIndex);
+      return {
+        ...ss,
+        sequences: ss.sequences.map(s =>
+          s.id === sequenceId ? { ...s, frameIds: newFrameIds } : s
+        ),
+      };
+    });
   };
 
   const handleRenameFrame = (index: number, name: string) => {
@@ -605,7 +618,7 @@ function App() {
         onRenameSequence={handleRenameSequence}
         onDuplicateFrame={handleDuplicateFrame}
         onDeleteFrame={handleDeleteFrame}
-        onReorderFrame={handleReorderFrame}
+        onReorderFrameInSequence={handleReorderFrameInSequence}
         onRenameFrame={handleRenameFrame}
         onCopyToNewSequence={handleCopyToNewSequence}
       />

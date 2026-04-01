@@ -87,6 +87,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><td>📏 Line</td><td><span className="help-kbd">L</span></td><td>Click and drag to draw a straight line.</td></tr>
                 <tr><td>⬜ Rectangle</td><td><span className="help-kbd">R</span></td><td>Click and drag to draw a rectangle outline.</td></tr>
                 <tr><td>⭕ Circle</td><td><span className="help-kbd">C</span></td><td>Click and drag to draw a circle outline.</td></tr>
+                <tr><td>⬚ Select</td><td><span className="help-kbd">S</span></td><td>Click and drag to select a rectangular region.</td></tr>
+                <tr><td>✥ Move</td><td><span className="help-kbd">M</span></td><td>Drag to move selected pixels. Lifts pixels on first drag.</td></tr>
               </tbody>
             </table>
             <p>
@@ -209,7 +211,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><td>Add sequence</td><td>Click "+ Sequence" at the top of the panel</td></tr>
                 <tr><td>Copy to new sequence</td><td>Click "📋 Copy → New Seq" to duplicate the current frame into a new sequence</td></tr>
                 <tr><td>Rename</td><td>Click on a sequence or frame name to type a new name</td></tr>
-                <tr><td>Reorder frames</td><td>Use the ← → arrows on each frame</td></tr>
+                <tr><td>Reorder frames</td><td>Drag and drop frame thumbnails, or use the ◀ ▶ arrows</td></tr>
                 <tr><td>Delete</td><td>Click ✕ on a frame or 🗑️ on a sequence</td></tr>
               </tbody>
             </table>
@@ -252,6 +254,14 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><td><span className="help-kbd">L</span></td><td>Line tool</td></tr>
                 <tr><td><span className="help-kbd">R</span></td><td>Rectangle tool</td></tr>
                 <tr><td><span className="help-kbd">C</span></td><td>Circle tool</td></tr>
+                <tr><td><span className="help-kbd">S</span></td><td>Select tool</td></tr>
+                <tr><td><span className="help-kbd">M</span></td><td>Move tool</td></tr>
+                <tr><td><span className="help-kbd">Ctrl+C</span></td><td>Copy selected pixels</td></tr>
+                <tr><td><span className="help-kbd">Ctrl+X</span></td><td>Cut selected pixels</td></tr>
+                <tr><td><span className="help-kbd">Ctrl+V</span></td><td>Paste clipboard (in select/move mode)</td></tr>
+                <tr><td><span className="help-kbd">Delete</span></td><td>Clear selected pixels</td></tr>
+                <tr><td><span className="help-kbd">Escape</span></td><td>Deselect / commit floating pixels</td></tr>
+                <tr><td><span className="help-kbd">Arrow Keys</span></td><td>Nudge selection 1 pixel</td></tr>
                 <tr><td><span className="help-kbd">Scroll Wheel</span></td><td>Zoom in / out on canvas</td></tr>
               </tbody>
             </table>

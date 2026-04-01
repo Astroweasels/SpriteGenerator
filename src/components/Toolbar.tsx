@@ -29,6 +29,8 @@ const TOOLS: { tool: Tool; label: string; icon: string; shortcut: string }[] = [
   { tool: 'line', label: 'Line', icon: '📏', shortcut: 'L' },
   { tool: 'rect', label: 'Rectangle', icon: '⬜', shortcut: 'R' },
   { tool: 'circle', label: 'Circle', icon: '⭕', shortcut: 'C' },
+  { tool: 'select', label: 'Select', icon: '⬚', shortcut: 'S' },
+  { tool: 'move', label: 'Move', icon: '✥', shortcut: 'M' },
 ];
 
 export const Toolbar: React.FC<ToolbarProps> = ({
