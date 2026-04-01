@@ -878,10 +878,86 @@ components:
           type: string
           format: uri
           description: Combined sprite sheet as a base64 data URI.
+        manifest:
+          $ref: '#/components/schemas/SpriteSheetManifest'
         sheetUrl:
           type: string
           format: uri
           description: Pre-signed S3 download URL (15 min expiry). Only present when S3 is configured.
+
+    SpriteSheetManifest:
+      type: object
+      description: |
+        TexturePacker-compatible JSON manifest for the sprite sheet.
+        Compatible with Phaser, PixiJS, Godot importers, and most 2D game engines.
+        Save this alongside the sprite sheet PNG to import directly into your engine.
+      properties:
+        frames:
+          type: object
+          description: Map of frame names to their position/size in the sheet.
+          additionalProperties:
+            type: object
+            properties:
+              frame:
+                type: object
+                properties:
+                  x:
+                    type: integer
+                  y:
+                    type: integer
+                  w:
+                    type: integer
+                  h:
+                    type: integer
+              rotated:
+                type: boolean
+              trimmed:
+                type: boolean
+              spriteSourceSize:
+                type: object
+                properties:
+                  x:
+                    type: integer
+                  y:
+                    type: integer
+                  w:
+                    type: integer
+                  h:
+                    type: integer
+              sourceSize:
+                type: object
+                properties:
+                  w:
+                    type: integer
+                  h:
+                    type: integer
+        animations:
+          type: object
+          description: Map of animation sequence names to arrays of frame names.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        meta:
+          type: object
+          properties:
+            app:
+              type: string
+            version:
+              type: string
+            image:
+              type: string
+            format:
+              type: string
+            size:
+              type: object
+              properties:
+                w:
+                  type: integer
+                h:
+                  type: integer
+            scale:
+              type: number
 
     ErrorResponse:
       type: object

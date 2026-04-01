@@ -172,12 +172,25 @@ curl -X POST http://localhost:3001/generate \
     "..."
   ],
   "sheet": "data:image/png;base64,iVBORw0KGgo...",
+  "manifest": {
+    "frames": {
+      "idle_1": { "frame": {"x":0,"y":0,"w":64,"h":64}, "rotated": false, "trimmed": false, "spriteSourceSize": {"x":0,"y":0,"w":64,"h":64}, "sourceSize": {"w":64,"h":64} },
+      "walk_1": { "frame": {"x":64,"y":0,"w":64,"h":64}, "rotated": false, "trimmed": false, "spriteSourceSize": {"x":0,"y":0,"w":64,"h":64}, "sourceSize": {"w":64,"h":64} }
+    },
+    "animations": {
+      "Idle": ["idle_1", "idle_2"],
+      "Walk": ["walk_1", "walk_2", "walk_3", "walk_4"],
+      "Attack Slash": ["attack_slash_1", "attack_slash_2"]
+    },
+    "meta": { "app": "AstroSprite", "version": "1.0", "image": "sprite_sheet.png", "format": "RGBA8888", "size": {"w":512,"h":64}, "scale": 2 }
+  },
   "sheetUrl": "https://spriteforge-sprites.s3.amazonaws.com/sprites/abc.png?..."
 }
 ```
 
 - **`frames`**: Each animation frame as a base64 PNG data URI.
 - **`sheet`**: All frames in a horizontal strip (data URI).
+- **`manifest`**: TexturePacker-compatible JSON manifest. Save alongside the sheet PNG and import directly into Phaser, PixiJS, Godot, or any engine that reads this format.
 - **`sequences`**: Maps animation names to indices in the `frames` array. Use this to split frames into individual animations in your game engine.
 - **`sheetUrl`**: Pre-signed S3 URL (15 min expiry). Only present when deployed to AWS with S3 configured.
 
@@ -190,9 +203,10 @@ fs.writeFileSync('idle_1.png', Buffer.from(base64, 'base64'));
 
 ### Using in a game engine
 
-1. Save each sequence as separate PNGs or a single strip
-2. The `sequences` array tells you which frames belong to which animation
-3. Import into Godot (`AnimatedSprite2D`), Unity (`Animation Clips`), etc.
+1. Save the `sheet` as a PNG file and the `manifest` as a JSON file in the same directory
+2. Import the JSON manifest directly — Phaser (`this.load.atlas()`), PixiJS (`Assets.load()`), and Godot importers all support this format
+3. The `animations` field in the manifest maps sequence names to frame names for easy animation setup
+4. Alternatively, use the `sequences` array and individual `frames` to handle it manually
 
 ---
 
