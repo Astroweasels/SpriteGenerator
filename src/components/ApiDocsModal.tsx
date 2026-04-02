@@ -5,7 +5,7 @@ interface ApiDocsModalProps {
   onClose: () => void;
 }
 
-const API_BASE = 'https://astrosprite.com';
+const API_BASE = 'https://p0r6geqh15.execute-api.us-east-2.amazonaws.com/prod';
 
 const EXAMPLE_REQUEST = `{
   "style": "humanoid",
