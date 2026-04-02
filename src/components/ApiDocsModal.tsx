@@ -5,7 +5,7 @@ interface ApiDocsModalProps {
   onClose: () => void;
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://p0r6geqh15.execute-api.us-east-2.amazonaws.com/prod';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://api.astrosprite.com';
 
 const EXAMPLE_REQUEST = `{
   "style": "humanoid",

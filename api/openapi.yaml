@@ -170,7 +170,7 @@ info:
     url: https://github.com/Astroweasels/SpriteGenerator
 
 servers:
-  - url: https://p0r6geqh15.execute-api.us-east-2.amazonaws.com/prod
+  - url: https://api.astrosprite.com
     description: Production
 
 paths:
