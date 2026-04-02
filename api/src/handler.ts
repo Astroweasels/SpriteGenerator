@@ -3,7 +3,6 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB, SpriteSheetManifest } from './types.js';
 import { generateRandomSprite, POSE_SEQUENCE_NAMES } from './generate.js';
@@ -278,8 +277,11 @@ export async function handler(
   const routePath = event.requestContext?.http?.path || event.rawPath || '/generate';
   const method = event.requestContext?.http?.method || 'POST';
 
+  try {
   // Serve Swagger UI
   if (method === 'GET' && (routePath === '/docs' || routePath === '/docs/')) {
+    const stageName = event.requestContext?.stage || 'prod';
+    const specUrl = stageName === '$default' ? '/openapi.yaml' : `/${stageName}/openapi.yaml`;
     const swaggerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -291,7 +293,7 @@ export async function handler(
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
-    SwaggerUIBundle({ url: '/openapi.yaml', dom_id: '#swagger-ui', deepLinking: true });
+    SwaggerUIBundle({ url: '${specUrl}', dom_id: '#swagger-ui', deepLinking: true });
   </script>
 </body>
 </html>`;
@@ -305,8 +307,8 @@ export async function handler(
   // Serve OpenAPI spec
   if (method === 'GET' && routePath === '/openapi.yaml') {
     try {
-      const handlerDir = path.dirname(fileURLToPath(import.meta.url));
-      const specPath = path.resolve(handlerDir, '..', 'openapi.yaml');
+      // In Lambda, process.cwd() is /var/task and the code is at /var/task/
+      const specPath = path.join(process.cwd(), 'openapi.yaml');
       const spec = fs.readFileSync(specPath, 'utf-8');
       return {
         statusCode: 200,
@@ -321,8 +323,6 @@ export async function handler(
       };
     }
   }
-
-  try {
     // Parse body
     let body: unknown;
     try {
