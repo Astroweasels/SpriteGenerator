@@ -314,7 +314,7 @@ export async function handler(
       const spec = fs.readFileSync(specPath, 'utf-8');
       return {
         statusCode: 200,
-        headers: { ...headers, 'Content-Type': 'text/yaml' },
+        headers: { ...headers, 'Content-Type': 'text/yaml; charset=utf-8' },
         body: spec,
       };
     } catch {
