@@ -50,13 +50,14 @@ Resources:
           - '*'
         AllowMethods:
           - POST
+          - GET
           - OPTIONS
         AllowHeaders:
           - Content-Type
           - x-api-key
-      ThrottleConfig:
-        RateLimit: !Ref ThrottleRateLimit
-        BurstLimit: !Ref ThrottleBurstLimit
+      DefaultRouteSettings:
+        ThrottlingRateLimit: !Ref ThrottleRateLimit
+        ThrottlingBurstLimit: !Ref ThrottleBurstLimit
 
   # --- Lambda Function ---
   GenerateFunction:
