@@ -507,11 +507,11 @@ function App() {
           <button className="header-btn import-btn" onClick={() => fileInputRef.current?.click()}>
             📂 Import PNG
           </button>
-          <button className="header-btn generate-btn" onClick={() => setShowGenerateModal(true)}>
-            🎲 Generate Assets
-          </button>
           <button className="header-btn export-btn" onClick={() => setShowExportModal(true)}>
             📥 Export
+          </button>
+          <button className="header-btn generate-btn" onClick={() => setShowGenerateModal(true)}>
+            🎲 Generate Assets
           </button>
           <button className="header-btn help-btn" onClick={() => setShowHelp(true)}>
             ❓ Help
