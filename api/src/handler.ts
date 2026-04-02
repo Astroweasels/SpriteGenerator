@@ -284,8 +284,6 @@ export async function handler(
   try {
   // Serve Swagger UI
   if (method === 'GET' && (routePath === '/docs' || routePath === '/docs/')) {
-    const stageName = event.requestContext?.stage || 'prod';
-    const specUrl = stageName === '$default' ? '/openapi.yaml' : `/${stageName}/openapi.yaml`;
     const swaggerHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -297,7 +295,7 @@ export async function handler(
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
-    SwaggerUIBundle({ url: '${specUrl}', dom_id: '#swagger-ui', deepLinking: true });
+    SwaggerUIBundle({ url: window.location.href.replace(/\\/docs\\/?$/, '/openapi.yaml'), dom_id: '#swagger-ui', deepLinking: true });
   </script>
 </body>
 </html>`;
