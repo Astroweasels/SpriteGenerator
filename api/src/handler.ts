@@ -274,7 +274,11 @@ export async function handler(
     return { statusCode: 204, headers, body: '' };
   }
 
-  const routePath = event.rawPath || event.requestContext?.http?.path || '/generate';
+  const rawPath = event.rawPath || event.requestContext?.http?.path || '/generate';
+  const stage = event.requestContext?.stage || '';
+  const routePath = stage && stage !== '$default' && rawPath.startsWith(`/${stage}`)
+    ? rawPath.slice(stage.length + 1) || '/'
+    : rawPath;
   const method = event.requestContext?.http?.method || 'POST';
 
   try {
