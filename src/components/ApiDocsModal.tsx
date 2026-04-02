@@ -98,9 +98,10 @@ export const ApiDocsModal: React.FC<ApiDocsModalProps> = ({ onClose }) => {
               <a
                 className="api-link-btn"
                 href={`${API_BASE}/openapi.yaml`}
-                download="openapi.yaml"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                📄 OpenAPI Spec (Download)
+                📄 OpenAPI Spec
               </a>
             </div>
           </div>
@@ -268,7 +269,7 @@ export const ApiDocsModal: React.FC<ApiDocsModalProps> = ({ onClose }) => {
             <h3>🤖 AI Agent Integration</h3>
             <div className="api-tip">
               <strong>For AI agents:</strong> Feed the{' '}
-              <a href={`${API_BASE}/openapi.yaml`} download="openapi.yaml">
+              <a href={`${API_BASE}/openapi.yaml`} target="_blank" rel="noopener noreferrer">
                 OpenAPI spec
               </a>{' '}
               to any tool-calling framework (LangChain, CrewAI, OpenAI function calling, etc.)
@@ -380,7 +381,7 @@ export const ApiDocsModal: React.FC<ApiDocsModalProps> = ({ onClose }) => {
             </table>
             <div className="api-tip">
               <strong>Agents:</strong> Read the full guide in the{' '}
-              <a href={`${API_BASE}/openapi.yaml`} download="openapi.yaml">
+              <a href={`${API_BASE}/openapi.yaml`} target="_blank" rel="noopener noreferrer">
                 OpenAPI spec
               </a>{' '}
               under "Pixel Art Drawing Guide for AI Agents". It has exact coordinate formulas

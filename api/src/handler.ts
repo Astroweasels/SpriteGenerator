@@ -2,6 +2,9 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB, SpriteSheetManifest } from './types.js';
 import { generateRandomSprite, POSE_SEQUENCE_NAMES } from './generate.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';
@@ -272,6 +275,53 @@ export async function handler(
     return { statusCode: 204, headers, body: '' };
   }
 
+  const routePath = event.requestContext?.http?.path || event.rawPath || '/generate';
+  const method = event.requestContext?.http?.method || 'POST';
+
+  // Serve Swagger UI
+  if (method === 'GET' && (routePath === '/docs' || routePath === '/docs/')) {
+    const swaggerHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AstroSprite API – Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({ url: '/openapi.yaml', dom_id: '#swagger-ui', deepLinking: true });
+  </script>
+</body>
+</html>`;
+    return {
+      statusCode: 200,
+      headers: { ...headers, 'Content-Type': 'text/html' },
+      body: swaggerHtml,
+    };
+  }
+
+  // Serve OpenAPI spec
+  if (method === 'GET' && routePath === '/openapi.yaml') {
+    try {
+      const handlerDir = path.dirname(fileURLToPath(import.meta.url));
+      const specPath = path.resolve(handlerDir, '..', 'openapi.yaml');
+      const spec = fs.readFileSync(specPath, 'utf-8');
+      return {
+        statusCode: 200,
+        headers: { ...headers, 'Content-Type': 'text/yaml' },
+        body: spec,
+      };
+    } catch {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'openapi.yaml not found' }),
+      };
+    }
+  }
+
   try {
     // Parse body
     let body: unknown;
@@ -282,34 +332,32 @@ export async function handler(
     }
 
     // Route by path
-    const path = event.requestContext?.http?.path || event.rawPath || '/generate';
-
-    if (path === '/draw') {
+    if (routePath === '/draw') {
       const result = handleDraw(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
     }
 
-    if (path === '/import') {
+    if (routePath === '/import') {
       const result = await handleImport(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
     }
 
-    if (path === '/export') {
+    if (routePath === '/export') {
       const result = handleExport(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
     }
 
-    if (path === '/layers') {
+    if (routePath === '/layers') {
       const result = handleLayers(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
     }
 
-    if (path === '/frames') {
+    if (routePath === '/frames') {
       const result = handleFrames(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
     }
 
-    if (path === '/resize') {
+    if (routePath === '/resize') {
       const result = handleResize(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };
     }

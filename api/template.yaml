@@ -83,6 +83,54 @@ Resources:
             ApiId: !Ref SpriteForgeApi
             Path: /health
             Method: GET
+        SwaggerDocs:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /docs
+            Method: GET
+        OpenApiSpec:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /openapi.yaml
+            Method: GET
+        DrawSprite:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /draw
+            Method: POST
+        ImportSprite:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /import
+            Method: POST
+        ExportSprite:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /export
+            Method: POST
+        ManageLayers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /layers
+            Method: POST
+        ManageFrames:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /frames
+            Method: POST
+        ResizeCanvas:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /resize
+            Method: POST
 
   # --- Usage Plan (for API key throttling via REST API, optional) ---
   # Note: HttpApi (API Gateway v2) does not natively support API keys.

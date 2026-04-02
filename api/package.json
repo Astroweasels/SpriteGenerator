@@ -4,9 +4,9 @@
   "description": "Headless API for generating pixel art sprites via AWS Lambda",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').copyFileSync('openapi.yaml','dist/openapi.yaml')\"",
     "start": "node dist/local.js",
-    "package": "tsc && cd dist && npm install --production"
+    "package": "npm run build && cd dist && npm install --production"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.700.0",
