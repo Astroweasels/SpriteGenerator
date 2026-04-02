@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import type { Color, Tool, SpriteFrame } from '../types';
 import {
   pixelKey,
@@ -25,6 +25,10 @@ interface ClipboardData {
   h: number;
 }
 
+export interface PixelCanvasHandle {
+  rotateSelection: () => void;
+}
+
 interface PixelCanvasProps {
   frame: SpriteFrame;
   width: number;
@@ -40,12 +44,13 @@ interface PixelCanvasProps {
   onPixelsChanged: (layerId: string, pixels: Map<string, Color>) => void;
   onColorPicked?: (color: Color) => void;
   onSaveUndo?: () => void;
+  onSelectionChange?: (hasSelection: boolean) => void;
 }
 
 const CHECKERBOARD_LIGHT = '#cccccc';
 const CHECKERBOARD_DARK = '#999999';
 
-export const PixelCanvas: React.FC<PixelCanvasProps> = ({
+export const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(({
   frame,
   width,
   height,
@@ -60,7 +65,8 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
   onPixelsChanged,
   onColorPicked,
   onSaveUndo,
-}) => {
+  onSelectionChange,
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState<[number, number] | null>(null);
@@ -212,6 +218,55 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
     setFloatingPixels(null);
     setFloatingOffset([0, 0]);
   }, [floatingPixels, floatingOffset, activeLayer, width, height, onPixelsChanged]);
+
+  // Notify parent about selection state changes
+  useEffect(() => {
+    onSelectionChange?.(selection !== null);
+  }, [selection, onSelectionChange]);
+
+  // Rotate selection 90° clockwise
+  const rotateSelection = useCallback(() => {
+    if (!selection || !activeLayer) return;
+    onSaveUndo?.();
+
+    let pixels: Map<string, Color>;
+    if (floatingPixels) {
+      pixels = floatingPixels;
+    } else {
+      // Lift pixels from the canvas into floating
+      pixels = new Map<string, Color>();
+      const newLayerPixels = new Map(activeLayer.pixels);
+      for (let sy = selection.y; sy < selection.y + selection.h; sy++) {
+        for (let sx = selection.x; sx < selection.x + selection.w; sx++) {
+          const key = pixelKey(sx, sy);
+          const c = activeLayer.pixels.get(key);
+          if (c) {
+            pixels.set(pixelKey(sx - selection.x, sy - selection.y), c);
+            newLayerPixels.delete(key);
+          }
+        }
+      }
+      onPixelsChanged(activeLayer.id, newLayerPixels);
+    }
+
+    // Rotate 90° CW: (x, y) → (h-1-y, x), new dimensions: w'=h, h'=w
+    const oldW = selection.w;
+    const oldH = selection.h;
+    const rotated = new Map<string, Color>();
+    for (const [key, color] of pixels) {
+      const [x, y] = key.split(',').map(Number);
+      rotated.set(pixelKey(oldH - 1 - y, x), color);
+    }
+
+    setFloatingPixels(rotated);
+    const currentOffset = floatingPixels ? floatingOffset : [selection.x, selection.y] as [number, number];
+    setFloatingOffset(currentOffset);
+    setSelection({ x: currentOffset[0], y: currentOffset[1], w: oldH, h: oldW });
+  }, [selection, activeLayer, floatingPixels, floatingOffset, onPixelsChanged, onSaveUndo]);
+
+  useImperativeHandle(ref, () => ({
+    rotateSelection,
+  }), [rotateSelection]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!activeLayer) return;
@@ -613,4 +668,6 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       />
     </div>
   );
-};
+});
+
+PixelCanvas.displayName = 'PixelCanvas';

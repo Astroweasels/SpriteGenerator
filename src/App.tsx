@@ -10,9 +10,11 @@ import {
   blendColor,
   serializeFrame,
   deserializeFrame,
+  pixelKey,
 } from './utils/spriteUtils';
 import { generateRandomSprite } from './utils/generateSprite';
 import { PixelCanvas } from './components/PixelCanvas';
+import type { PixelCanvasHandle } from './components/PixelCanvas';
 import { Toolbar } from './components/Toolbar';
 import { ColorPalette } from './components/ColorPalette';
 import { LayerPanel } from './components/LayerPanel';
@@ -49,7 +51,9 @@ function App() {
   const [newWidth, setNewWidth] = useState(32);
   const [newHeight, setNewHeight] = useState(32);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+  const [hasSelection, setHasSelection] = useState(false);
   const canvasAreaRef = useRef<HTMLElement>(null);
+  const pixelCanvasRef = useRef<PixelCanvasHandle>(null);
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(0);
@@ -449,6 +453,37 @@ function App() {
     requestAnimationFrame(() => setZoom(computeFitZoom(w, h)));
   };
 
+  // ---- Rotate entire frame 90° clockwise ----
+  const handleRotateFrame = () => {
+    const frame = spriteSheet.frames[activeFrameIndex];
+    if (!frame) return;
+    const layer = frame.layers.find(l => l.id === frame.activeLayerId);
+    if (!layer) return;
+    saveUndo();
+    const oldW = spriteSheet.width;
+    const oldH = spriteSheet.height;
+    const rotated = new Map<string, Color>();
+    for (const [key, color] of layer.pixels) {
+      const [x, y] = key.split(',').map(Number);
+      rotated.set(pixelKey(oldH - 1 - y, x), color);
+    }
+    setSpriteSheet(prev => ({
+      ...prev,
+      width: oldH,
+      height: oldW,
+      frames: prev.frames.map((f, i) => {
+        if (i !== activeFrameIndex) return f;
+        return {
+          ...f,
+          layers: f.layers.map(l =>
+            l.id === frame.activeLayerId ? { ...l, pixels: rotated } : l
+          ),
+        };
+      }),
+    }));
+    requestAnimationFrame(() => setZoom(computeFitZoom(oldH, oldW)));
+  };
+
   // ---- PNG Import ----
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleImportPng = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -541,6 +576,9 @@ function App() {
         canvasWidth={spriteSheet.width}
         canvasHeight={spriteSheet.height}
         onCanvasResize={handleCanvasResize}
+        onRotateSelection={() => pixelCanvasRef.current?.rotateSelection()}
+        onRotateFrame={handleRotateFrame}
+        hasSelection={hasSelection}
       />
 
       <PresetBar onApplyPreset={handleGenerate} />
@@ -560,6 +598,7 @@ function App() {
         <main className="canvas-area" ref={canvasAreaRef}>
           {activeFrame && (
             <PixelCanvas
+              ref={pixelCanvasRef}
               frame={activeFrame}
               width={spriteSheet.width}
               height={spriteSheet.height}
@@ -574,6 +613,7 @@ function App() {
               onPixelsChanged={handlePixelsChanged}
               onColorPicked={setCurrentColor}
               onSaveUndo={saveUndo}
+              onSelectionChange={setHasSelection}
             />
           )}
         </main>
