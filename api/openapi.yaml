@@ -170,16 +170,7 @@ info:
     url: https://github.com/Astroweasels/SpriteGenerator
 
 servers:
-  - url: https://{apiId}.execute-api.{region}.amazonaws.com/prod
-    description: AWS Production
-    variables:
-      apiId:
-        default: REPLACE_ME
-      region:
-        default: us-east-1
-  - url: http://localhost:3001
-    description: Local development
-  - url: https://astrosprite.com
+  - url: https://p0r6geqh15.execute-api.us-east-2.amazonaws.com/prod
     description: Production
 
 paths:
