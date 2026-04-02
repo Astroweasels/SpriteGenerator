@@ -223,10 +223,10 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       case 'pencil': {
         const newPixels = new Map(activeLayer.pixels);
         const drawColor = getDrawColor();
-        const half = Math.floor(brushSize / 2);
-        for (let dy = -half; dy <= half; dy++) {
-          for (let dx = -half; dx <= half; dx++) {
-            const px = x + dx, py = y + dy;
+        const offset = Math.floor(brushSize / 2);
+        for (let dy = 0; dy < brushSize; dy++) {
+          for (let dx = 0; dx < brushSize; dx++) {
+            const px = x - offset + dx, py = y - offset + dy;
             if (px >= 0 && px < width && py >= 0 && py < height) {
               newPixels.set(pixelKey(px, py), drawColor);
             }
@@ -237,10 +237,10 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       }
       case 'eraser': {
         const newPixels = new Map(activeLayer.pixels);
-        const half = Math.floor(brushSize / 2);
-        for (let dy = -half; dy <= half; dy++) {
-          for (let dx = -half; dx <= half; dx++) {
-            const px = x + dx, py = y + dy;
+        const offset = Math.floor(brushSize / 2);
+        for (let dy = 0; dy < brushSize; dy++) {
+          for (let dx = 0; dx < brushSize; dx++) {
+            const px = x - offset + dx, py = y - offset + dy;
             if (px >= 0 && px < width && py >= 0 && py < height) {
               newPixels.delete(pixelKey(px, py));
             }
@@ -308,10 +308,10 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       case 'pencil': {
         const newPixels = new Map(activeLayer.pixels);
         const drawColor = getDrawColor();
-        const half = Math.floor(brushSize / 2);
-        for (let dy = -half; dy <= half; dy++) {
-          for (let dx = -half; dx <= half; dx++) {
-            const px = x + dx, py = y + dy;
+        const offset = Math.floor(brushSize / 2);
+        for (let dy = 0; dy < brushSize; dy++) {
+          for (let dx = 0; dx < brushSize; dx++) {
+            const px = x - offset + dx, py = y - offset + dy;
             if (px >= 0 && px < width && py >= 0 && py < height) {
               newPixels.set(pixelKey(px, py), drawColor);
             }
@@ -322,10 +322,10 @@ export const PixelCanvas: React.FC<PixelCanvasProps> = ({
       }
       case 'eraser': {
         const newPixels = new Map(activeLayer.pixels);
-        const half = Math.floor(brushSize / 2);
-        for (let dy = -half; dy <= half; dy++) {
-          for (let dx = -half; dx <= half; dx++) {
-            const px = x + dx, py = y + dy;
+        const offset = Math.floor(brushSize / 2);
+        for (let dy = 0; dy < brushSize; dy++) {
+          for (let dx = 0; dx < brushSize; dx++) {
+            const px = x - offset + dx, py = y - offset + dy;
             if (px >= 0 && px < width && py >= 0 && py < height) {
               newPixels.delete(pixelKey(px, py));
             }

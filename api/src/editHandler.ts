@@ -163,13 +163,13 @@ function applyDrawOperation(layer: Layer, op: DrawOperation, w: number, h: numbe
       if (!op.points || !Array.isArray(op.points)) throw new Error('pencil requires "points"');
       const colors = op.colorCycle && op.colorCycle.length > 0 ? op.colorCycle : null;
       let cycleIdx = 0;
+      const offset = Math.floor(brushSize / 2);
       for (const [px, py] of op.points) {
         const color = colors ? toColor(colors[cycleIdx % colors.length]) : toColor(op.color);
         if (colors) cycleIdx++;
-        const half = Math.floor(brushSize / 2);
-        for (let dy = -half; dy <= half; dy++) {
-          for (let dx = -half; dx <= half; dx++) {
-            const x = px + dx, y = py + dy;
+        for (let dy = 0; dy < brushSize; dy++) {
+          for (let dx = 0; dx < brushSize; dx++) {
+            const x = px - offset + dx, y = py - offset + dy;
             if (x >= 0 && x < w && y >= 0 && y < h) {
               layer.pixels.set(pixelKey(x, y), color);
             }
@@ -180,11 +180,11 @@ function applyDrawOperation(layer: Layer, op: DrawOperation, w: number, h: numbe
     }
     case 'eraser': {
       if (!op.points || !Array.isArray(op.points)) throw new Error('eraser requires "points"');
-      const half = Math.floor(brushSize / 2);
+      const offset = Math.floor(brushSize / 2);
       for (const [px, py] of op.points) {
-        for (let dy = -half; dy <= half; dy++) {
-          for (let dx = -half; dx <= half; dx++) {
-            const x = px + dx, y = py + dy;
+        for (let dy = 0; dy < brushSize; dy++) {
+          for (let dx = 0; dx < brushSize; dx++) {
+            const x = px - offset + dx, y = py - offset + dy;
             if (x >= 0 && x < w && y >= 0 && y < h) {
               layer.pixels.delete(pixelKey(x, y));
             }
