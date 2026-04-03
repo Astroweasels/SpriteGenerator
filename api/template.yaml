@@ -71,6 +71,8 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref SpriteBucket
+    Metadata:
+      BuildMethod: makefile
       Events:
         GenerateSprite:
           Type: HttpApi

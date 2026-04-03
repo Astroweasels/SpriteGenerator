@@ -282,6 +282,15 @@ export async function handler(
   const method = event.requestContext?.http?.method || 'POST';
 
   try {
+  // Health check
+  if (method === 'GET' && routePath === '/health') {
+    return {
+      statusCode: 200,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ok' }),
+    };
+  }
+
   // Serve Swagger UI
   if (method === 'GET' && (routePath === '/docs' || routePath === '/docs/')) {
     const swaggerHtml = `<!DOCTYPE html>
