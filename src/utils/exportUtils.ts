@@ -80,7 +80,7 @@ export function exportSpriteSheetAsPNG(
 export function exportAsGIF(
   sheet: SpriteSheet,
   scale = 1,
-  frameDelay = 100
+  _frameDelay = 100
 ): Promise<Blob> {
   // Simple GIF export using canvas frames
   // For a real GIF we'd need a library, but we can export as animated PNG sequence

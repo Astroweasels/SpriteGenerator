@@ -220,7 +220,7 @@ function generateCreatureBody(size: number, complexity: string): boolean[][] {
   return grid;
 }
 
-function generateMechBody(size: number, complexity: string): boolean[][] {
+function generateMechBody(size: number, _complexity: string): boolean[][] {
   const grid: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
   const cx = Math.floor(size / 2);
 
@@ -319,7 +319,6 @@ function generateObjectBody(size: number, complexity: string, forceVariant?: num
   const variant = forceVariant !== undefined ? forceVariant : randomInt(0, 9);
   const grid: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
   const cx = Math.floor(size / 2);
-  const cy = Math.floor(size / 2);
 
   const fill = (x: number, y: number) => {
     if (x >= 0 && x < size && y >= 0 && y < size) grid[y][x] = true;
@@ -598,7 +597,7 @@ function applyPoseToPixels(
   basePixels: Map<string, Color>,
   size: number,
   poseIndex: number,
-  style: string
+  _style: string
 ): Map<string, Color> {
   const newPixels = new Map<string, Color>();
   const cx = Math.floor(size / 2);
@@ -818,7 +817,6 @@ function addWeapon(
   if (weapon === 'none') return;
 
   const cx = Math.floor(size / 2);
-  const s = Math.max(1, Math.floor(size * 0.05));
 
   const offsets = getPoseOffsets(poseIndex, size);
   let armDx = 0, armDy = 0;
@@ -905,7 +903,6 @@ function applyColorOverrides(
   size: number,
   overrides: RegionColorOverrides,
 ): void {
-  const cx = Math.floor(size / 2);
   const grid: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
   for (const key of pixels.keys()) {
     const [x, y] = key.split(',').map(Number);

@@ -73,7 +73,7 @@ const server = http.createServer(async (req, res) => {
     body,
     requestContext: { http: { method: 'POST', path: req.url } },
     rawPath: req.url,
-  } as any);
+  } as Parameters<typeof handler>[0]);
 
   const statusCode = typeof result === 'object' && 'statusCode' in result ? result.statusCode ?? 200 : 200;
   const headers = typeof result === 'object' && 'headers' in result ? (result.headers as Record<string, string>) : {};

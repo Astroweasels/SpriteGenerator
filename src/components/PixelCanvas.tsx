@@ -81,7 +81,6 @@ export const PixelCanvas = forwardRef<PixelCanvasHandle, PixelCanvasProps>(({
   const [floatingOffset, setFloatingOffset] = useState<[number, number]>([0, 0]);
   const [moveStart, setMoveStart] = useState<[number, number] | null>(null);
   const marchOffsetRef = useRef(0);
-  const marchAnimRef = useRef<number>(0);
 
   const pixelSize = zoom;
   const canvasWidth = width * pixelSize;

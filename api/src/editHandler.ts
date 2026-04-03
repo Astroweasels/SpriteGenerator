@@ -3,14 +3,12 @@ import { v4 as uuidv4 } from 'uuid';
 import type {
   Color, SpriteFrame, SpriteSheet, Layer,
   SpriteData, FrameData, LayerData,
-  DrawRequest, DrawOperation,
-  ImportRequest, ExportRequest,
-  LayerRequest, FrameRequest, ResizeRequest,
+  DrawOperation,
   SpriteResponse, ErrorResponse,
 } from './types.js';
 import {
   pixelKey, parsePixelKey, createLayer, cloneLayer,
-  flattenLayers, blendColor, TRANSPARENT,
+  blendColor, TRANSPARENT,
   floodFill, getLinePixels, getRectPixels, getCirclePixels,
 } from './spriteUtils.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';

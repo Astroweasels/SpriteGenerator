@@ -13,7 +13,14 @@ export const AnimationPreview: React.FC<AnimationPreviewProps> = ({ spriteSheet,
   const [playing, setPlaying] = useState(true);
   const [fps, setFps] = useState(8);
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [prevSequenceId, setPrevSequenceId] = useState(activeSequenceId);
   const previewScale = 3;
+
+  // Reset frame counter when sequence changes (render-time update avoids double render from useEffect)
+  if (prevSequenceId !== activeSequenceId) {
+    setPrevSequenceId(activeSequenceId);
+    setCurrentFrame(0);
+  }
 
   // Resolve frames for active sequence
   const seqFrames: SpriteFrame[] = useMemo(() => {
@@ -25,10 +32,6 @@ export const AnimationPreview: React.FC<AnimationPreviewProps> = ({ spriteSheet,
   }, [spriteSheet, activeSequenceId]);
 
   const seqName = spriteSheet.sequences.find(s => s.id === activeSequenceId)?.name ?? 'All';
-
-  useEffect(() => {
-    setCurrentFrame(0);
-  }, [activeSequenceId]);
 
   useEffect(() => {
     if (!playing || seqFrames.length <= 1) return;

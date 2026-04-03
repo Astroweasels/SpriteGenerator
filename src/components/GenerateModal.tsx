@@ -90,7 +90,7 @@ export const GenerateModal: React.FC<GenerateModalProps> = ({ onGenerate, onClos
               <label>Complexity</label>
               <select
                 value={options.complexity}
-                onChange={(e) => setOptions({ ...options, complexity: e.target.value as any })}
+                onChange={(e) => setOptions({ ...options, complexity: e.target.value as RandomGenOptions['complexity'] })}
               >
                 <option value="simple">Simple</option>
                 <option value="medium">Medium</option>

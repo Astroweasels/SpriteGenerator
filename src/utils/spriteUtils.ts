@@ -46,7 +46,7 @@ export function createLayer(name = 'Layer 1'): Layer {
   };
 }
 
-export function createFrame(name = 'Frame 1', width?: number, height?: number): SpriteFrame {
+export function createFrame(name = 'Frame 1', _width?: number, _height?: number): SpriteFrame {
   const layer = createLayer();
   return {
     id: uuidv4(),
@@ -106,7 +106,7 @@ export function cloneFrame(frame: SpriteFrame): SpriteFrame {
   };
 }
 
-export function flattenLayers(layers: Layer[], width: number, height: number): Map<string, Color> {
+export function flattenLayers(layers: Layer[], _width: number, _height: number): Map<string, Color> {
   const result = new Map<string, Color>();
   for (const layer of layers) {
     if (!layer.visible) continue;
@@ -259,7 +259,7 @@ export function deserializeFrame(json: string): SpriteFrame {
   const data = JSON.parse(json);
   return {
     ...data,
-    layers: data.layers.map((l: any) => ({
+    layers: data.layers.map((l: { pixels: [string, Color][] } & Record<string, unknown>) => ({
       ...l,
       pixels: new Map(l.pixels),
     })),

@@ -401,7 +401,11 @@ function generateCreatureBody(size: number, complexity: string): boolean[][] {
       }
       // Stem
       const stemW = Math.floor(size * 0.1);
-      for (let y = cy; y < Math.floor(size * 0.88); y++) fill(cx - stemW, y), fill(cx + stemW, y), rect(cx - stemW, y, cx + stemW, y);
+      for (let y = cy; y < Math.floor(size * 0.88); y++) {
+        fill(cx - stemW, y);
+        fill(cx + stemW, y);
+        rect(cx - stemW, y, cx + stemW, y);
+      }
       break;
     }
     case 7: { // Crab – wide flat body + claws
@@ -494,7 +498,7 @@ function generateCreatureBody(size: number, complexity: string): boolean[][] {
   return grid;
 }
 
-function generateMechBody(size: number, complexity: string): boolean[][] {
+function generateMechBody(size: number, _complexity: string): boolean[][] {
   const variant = randomInt(0, 2);
   const grid: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
   const cx = Math.floor(size / 2);
@@ -628,7 +632,6 @@ function generateObjectBody(size: number, complexity: string, forceVariant?: num
   const variant = forceVariant !== undefined ? forceVariant : randomInt(0, 9);
   const grid: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
   const cx = Math.floor(size / 2);
-  const cy = Math.floor(size / 2);
 
   const fill = (x: number, y: number) => {
     if (x >= 0 && x < size && y >= 0 && y < size) grid[y][x] = true;
@@ -1047,7 +1050,7 @@ function applyPoseToPixels(
   return newPixels;
 }
 
-function getPoseOffsets(poseIndex: number, size: number, style: string) {
+function getPoseOffsets(poseIndex: number, size: number, _style: string) {
   const s = Math.max(1, Math.floor(size * 0.05));
   const poseLibrary = [
     // Idle
@@ -1193,7 +1196,6 @@ function addWeapon(
   if (weapon === 'none') return;
 
   const cx = Math.floor(size / 2);
-  const s = Math.max(1, Math.floor(size * 0.05));
 
   // Get right-arm offset for this pose
   const offsets = getPoseOffsets(poseIndex, size, 'humanoid');

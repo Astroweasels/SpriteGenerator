@@ -30,24 +30,6 @@ function c(r: number, g: number, b: number): Color {
   return { r, g, b, a: 255 };
 }
 
-function darker(color: Color, amount = 40): Color {
-  return {
-    r: Math.max(0, color.r - amount),
-    g: Math.max(0, color.g - amount),
-    b: Math.max(0, color.b - amount),
-    a: 255,
-  };
-}
-
-function lighter(color: Color, amount = 30): Color {
-  return {
-    r: Math.min(255, color.r + amount),
-    g: Math.min(255, color.g + amount),
-    b: Math.min(255, color.b + amount),
-    a: 255,
-  };
-}
-
 // ---- Templates ----
 
 export const TEMPLATES: Record<string, CharacterTemplate> = {
