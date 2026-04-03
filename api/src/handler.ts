@@ -4,6 +4,9 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB, SpriteSheetManifest } from './types.js';
 import { generateRandomSprite, POSE_SEQUENCE_NAMES } from './generate.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';
@@ -318,8 +321,7 @@ export async function handler(
   // Serve OpenAPI spec
   if (method === 'GET' && routePath === '/openapi.yaml') {
     try {
-      // In Lambda, process.cwd() is /var/task and the code is at /var/task/
-      const specPath = path.join(process.cwd(), 'openapi.yaml');
+      const specPath = path.join(__dirname, 'openapi.yaml');
       const spec = fs.readFileSync(specPath, 'utf-8');
       return {
         statusCode: 200,

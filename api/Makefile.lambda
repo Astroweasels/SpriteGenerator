@@ -1,3 +1,0 @@
-build-GenerateFunction:
-	npm install --production
-	cp -r . "$(ARTIFACTS_DIR)/"

@@ -72,6 +72,9 @@ jobs:
         working-directory: api
         run: sam build
 
+      - name: Include OpenAPI spec in artifact
+        run: cp api/openapi.yaml api/.aws-sam/build/GenerateFunction/
+
       - name: SAM deploy
         working-directory: api
         run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
