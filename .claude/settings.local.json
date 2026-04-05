@@ -5,7 +5,8 @@
       "Bash(npx eslint:*)",
       "Bash(npx tsc:*)",
       "WebFetch(domain:astrosprite.com)",
-      "WebFetch(domain:api.astrosprite.com)"
+      "WebFetch(domain:api.astrosprite.com)",
+      "Bash(npm install:*)"
     ]
   }
 }
