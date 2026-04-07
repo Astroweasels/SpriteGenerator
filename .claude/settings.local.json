@@ -6,7 +6,10 @@
       "Bash(npx tsc:*)",
       "WebFetch(domain:astrosprite.com)",
       "WebFetch(domain:api.astrosprite.com)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(curl -s -X POST https://api.astrosprite.com/generate -H 'Content-Type: application/json' -d '{\"style\":\"humanoid\",\"size\":32,\"symmetrical\":true,\"colorScheme\":\"warm\",\"complexity\":\"medium\",\"template\":\"mage\",\"weapon\":\"staff\",\"selectedSequences\":[\"Idle\"]}')",
+      "Bash(python3 -c ':*)",
+      "Bash(node -e ':*)"
     ]
   }
 }
