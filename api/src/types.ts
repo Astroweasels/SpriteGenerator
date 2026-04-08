@@ -252,3 +252,48 @@ export interface ResizeRequest {
   width: number;
   height: number;
 }
+
+// ── Background generation types ───────────────────────────────────────────────
+
+export type BackgroundEnvironment =
+  | 'forest' | 'desert' | 'cave' | 'ocean'
+  | 'ruins' | 'tundra' | 'volcanic' | 'swamp'
+  | 'plains' | 'city';
+
+export type BackgroundTimeOfDay = 'day' | 'dusk' | 'night' | 'dawn';
+export type BackgroundWeather = 'clear' | 'foggy' | 'stormy' | 'snowy' | 'rainy';
+
+export interface BackgroundRequest {
+  environment: BackgroundEnvironment;
+  timeOfDay: BackgroundTimeOfDay;
+  weather: BackgroundWeather;
+  /** Number of parallax layers to generate (2-4) */
+  layerCount: 2 | 3 | 4;
+  /** Base pixel size — 2 = chunky 2×2, 4 = very chunky 4×4 */
+  pixelSize: 2 | 4;
+  density: 'sparse' | 'medium' | 'dense';
+  tileable: boolean;
+  /** Final output width in pixels (height is always 180) */
+  outputWidth: 160 | 320 | 640;
+  /** Optional seed for reproducible results */
+  seed?: number;
+}
+
+export interface BackgroundLayerResponse {
+  name: string;
+  /** PNG as base64 data URI */
+  png: string;
+  /** Suggested parallax scroll factor (0=static/sky, 1=foreground) */
+  parallaxScale: number;
+}
+
+export interface BackgroundResponse {
+  success: true;
+  layers: BackgroundLayerResponse[];
+  /** Flat composite of all layers as base64 data URI */
+  composite: string;
+  width: number;
+  height: number;
+  /** Godot 4 ParallaxBackground scene snippet */
+  godotScene: string;
+}

@@ -7,9 +7,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB, SpriteSheetManifest } from './types.js';
+import type { GenerateRequest, GenerateResponse, ErrorResponse, WeaponType, RegionColorOverrides, ColorRGB, SpriteSheetManifest, BackgroundRequest } from './types.js';
 import { generateRandomSprite, POSE_SEQUENCE_NAMES } from './generate.js';
 import { renderFrameToPNG, renderSheetToPNG } from './render.js';
+import { generateBackgroundAPI } from './generateBackground.js';
 import { TEMPLATE_NAMES } from './templates.js';
 import { handleDraw, handleImport, handleExport, handleLayers, handleFrames, handleResize } from './editHandler.js';
 
@@ -345,6 +346,48 @@ export async function handler(
     }
 
     // Route by path
+    if (routePath === '/generate-background') {
+      const b = body as Record<string, unknown>;
+
+      const VALID_ENVS = ['forest','desert','cave','ocean','ruins','tundra','volcanic','swamp','plains','city'] as const;
+      const VALID_TIMES = ['day','dusk','night','dawn'] as const;
+      const VALID_WEATHERS = ['clear','foggy','stormy','snowy','rainy'] as const;
+
+      if (!b.environment || !VALID_ENVS.includes(b.environment as typeof VALID_ENVS[number]))
+        throw new Error(`"environment" must be one of: ${VALID_ENVS.join(', ')}`);
+      if (!b.timeOfDay || !VALID_TIMES.includes(b.timeOfDay as typeof VALID_TIMES[number]))
+        throw new Error(`"timeOfDay" must be one of: ${VALID_TIMES.join(', ')}`);
+      if (!b.weather || !VALID_WEATHERS.includes(b.weather as typeof VALID_WEATHERS[number]))
+        throw new Error(`"weather" must be one of: ${VALID_WEATHERS.join(', ')}`);
+
+      const layerCount = Number(b.layerCount ?? 4);
+      if (![2,3,4].includes(layerCount)) throw new Error('"layerCount" must be 2, 3, or 4');
+
+      const pixelSize = Number(b.pixelSize ?? 2);
+      if (![2,4].includes(pixelSize)) throw new Error('"pixelSize" must be 2 or 4');
+
+      const density = (b.density ?? 'medium') as string;
+      if (!['sparse','medium','dense'].includes(density)) throw new Error('"density" must be sparse, medium, or dense');
+
+      const outputWidth = Number(b.outputWidth ?? 320);
+      if (![160,320,640].includes(outputWidth)) throw new Error('"outputWidth" must be 160, 320, or 640');
+
+      const bgReq: BackgroundRequest = {
+        environment: b.environment as BackgroundRequest['environment'],
+        timeOfDay: b.timeOfDay as BackgroundRequest['timeOfDay'],
+        weather: b.weather as BackgroundRequest['weather'],
+        layerCount: layerCount as 2|3|4,
+        pixelSize: pixelSize as 2|4,
+        density: density as BackgroundRequest['density'],
+        tileable: b.tileable !== false,
+        outputWidth: outputWidth as 160|320|640,
+        ...(b.seed !== undefined ? { seed: Number(b.seed) } : {}),
+      };
+
+      const bgResult = generateBackgroundAPI(bgReq);
+      return { statusCode: 200, headers, body: JSON.stringify(bgResult) };
+    }
+
     if (routePath === '/draw') {
       const result = handleDraw(body);
       return { statusCode: result.status, headers, body: JSON.stringify(result.body) };

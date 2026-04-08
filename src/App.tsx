@@ -21,6 +21,7 @@ import { LayerPanel } from './components/LayerPanel';
 import { FramePanel } from './components/FramePanel';
 import { AnimationPreview } from './components/AnimationPreview';
 import { GenerateModal } from './components/GenerateModal';
+import { BackgroundModal } from './components/BackgroundModal';
 import { ExportModal } from './components/ExportModal';
 import { ApiDocsModal } from './components/ApiDocsModal';
 import { HelpModal } from './components/HelpModal';
@@ -43,6 +44,7 @@ function App() {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showApiDocs, setShowApiDocs] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -546,7 +548,10 @@ function App() {
             📥 Export
           </button>
           <button className="header-btn generate-btn" onClick={() => setShowGenerateModal(true)}>
-            🎲 Generate Assets
+            🎲 Generate Sprite
+          </button>
+          <button className="header-btn" onClick={() => setShowBackgroundModal(true)} style={{ background: 'linear-gradient(135deg, #1a3a22, #2a5a35)' }}>
+            🌄 Background
           </button>
           <button className="header-btn help-btn" onClick={() => setShowHelp(true)}>
             ❓ Help
@@ -667,6 +672,12 @@ function App() {
         <GenerateModal
           onGenerate={handleGenerate}
           onClose={() => setShowGenerateModal(false)}
+        />
+      )}
+
+      {showBackgroundModal && (
+        <BackgroundModal
+          onClose={() => setShowBackgroundModal(false)}
         />
       )}
 
