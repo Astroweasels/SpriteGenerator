@@ -7,7 +7,7 @@
 export type EnvironmentType =
   | 'forest' | 'desert' | 'cave' | 'ocean'
   | 'ruins' | 'tundra' | 'volcanic' | 'swamp'
-  | 'plains' | 'city';
+  | 'plains' | 'city' | 'space';
 
 export type TimeOfDay = 'day' | 'dusk' | 'night' | 'dawn';
 export type WeatherType = 'clear' | 'foggy' | 'stormy' | 'snowy' | 'rainy';
@@ -37,6 +37,7 @@ const DEFAULT_TOPOGRAPHY: Record<EnvironmentType, Topography> = {
   swamp:    'flat',
   plains:   'flat',
   city:     'flat',
+    space:    'flat',
 };
 
 export interface BackgroundLayer {
@@ -126,6 +127,7 @@ const SKY: Record<TimeOfDay, Record<EnvironmentType, RGB[]>> = {
     swamp:   [[58,72,42],[85,98,62],[112,122,82]],
     plains:  [[82,162,218],[138,198,232],[208,232,243]],
     city:    [[98,132,172],[142,168,198],[182,202,218]],
+      space:   [[30,30,60],[60,60,120],[120,120,180]],
   },
   dusk: {
     forest:  [[62,38,88],[188,88,48],[238,158,78]],
@@ -138,6 +140,7 @@ const SKY: Record<TimeOfDay, Record<EnvironmentType, RGB[]>> = {
     swamp:   [[78,68,18],[118,98,38],[158,138,58]],
     plains:  [[82,42,108],[198,88,48],[238,165,78]],
     city:    [[88,52,88],[168,88,58],[218,148,88]],
+    space:   [[20,10,40],[60,30,80],[120,60,160]],
   },
   night: {
     forest:  [[8,14,32],[12,18,42],[16,22,52]],
@@ -150,6 +153,7 @@ const SKY: Record<TimeOfDay, Record<EnvironmentType, RGB[]>> = {
     swamp:   [[5,8,4],[8,12,6],[12,16,8]],
     plains:  [[8,14,32],[12,18,42],[16,22,52]],
     city:    [[6,8,18],[10,12,25],[14,18,35]],
+    space:   [[8,8,24],[16,16,48],[32,32,96]],
   },
   dawn: {
     forest:  [[88,28,78],[178,78,68],[228,168,88]],
@@ -162,6 +166,7 @@ const SKY: Record<TimeOfDay, Record<EnvironmentType, RGB[]>> = {
     swamp:   [[58,48,18],[98,78,38],[138,118,58]],
     plains:  [[88,28,88],[178,78,68],[228,168,88]],
     city:    [[68,38,88],[148,78,68],[208,148,88]],
+    space:   [[40,20,60],[80,40,120],[160,80,200]],
   },
 };
 
@@ -178,6 +183,7 @@ const PALETTES: Record<EnvironmentType, Palette> = {
   swamp:    { skyGrad:SKY.day.swamp,    distant:[40,60,28],   mid:[28,45,18],   midAccent:[50,72,35],   ground:[18,28,12],   groundAccent:[55,80,38],   element:[50,42,28],  fog:[90,110,70] },
   plains:   { skyGrad:SKY.day.plains,   distant:[140,175,90], mid:[110,155,65], midAccent:[155,190,95], ground:[80,125,45],  groundAccent:[130,180,75], element:[95,72,40] },
   city:     { skyGrad:SKY.day.city,     distant:[85,105,130], mid:[70,88,110],  midAccent:[95,115,140], ground:[55,70,88],   groundAccent:[80,95,115],  element:[65,75,88],  window:[220,210,150] },
+    space:    { skyGrad:SKY.day.space,    distant:[40,40,80],   mid:[80,80,160],  midAccent:[120,120,200], ground:[20,20,40],  groundAccent:[80,80,160],  element:[200,200,255] },
 };
 
 function getPalette(env: EnvironmentType, time: TimeOfDay): Palette {
@@ -505,30 +511,63 @@ function generateSkyLayer(
     ctx.fillRect(0, y * ps, opts.outputWidth, ps);
   }
 
-  // Celestial body (sun / moon)
+  // Celestial body (sun / moon/planets)
   const isNight = opts.timeOfDay === 'night';
-  const hasCelestial = opts.environment !== 'cave';
-  if (hasCelestial) {
-    const sunX = Math.floor(baseW * 0.75);
-    const sunY = Math.floor(baseH * 0.2);
-    const sunR = Math.max(2, Math.floor(baseH * 0.08));
-    const sunColor: RGB = isNight ? [230,230,215] : opts.timeOfDay === 'day' ? [255,238,160] : [238,168,80];
-
-    for (let dy = -sunR; dy <= sunR; dy++) {
-      const rw = Math.round(Math.sqrt(Math.max(0, sunR * sunR - dy * dy)));
-      if (rw > 0) {
-        row(ctx, sunY + dy, sunX - rw, sunX + rw, ps, sunColor);
+  if (opts.environment === 'space') {
+    // Draw many stars
+    const starCount = 120 + Math.floor(rng() * 60);
+    for (let i = 0; i < starCount; i++) {
+      ctx.fillStyle = toStyle([220 + Math.floor(rng()*35), 220 + Math.floor(rng()*35), 255], 0.7 + 0.3*rng());
+      const sx = Math.floor(rng() * baseW);
+      const sy = Math.floor(rng() * baseH * 0.8);
+      ctx.fillRect(sx * ps, sy * ps, ps, ps);
+    }
+    // Draw random planets
+    const planetCount = 1 + Math.floor(rng() * 2);
+    for (let p = 0; p < planetCount; p++) {
+      const px = Math.floor(baseW * (0.2 + 0.6 * rng()));
+      const py = Math.floor(baseH * (0.15 + 0.5 * rng()));
+      const pr = Math.max(3, Math.floor(baseH * (0.06 + 0.08 * rng())));
+      const color: RGB = [100 + Math.floor(rng()*120), 80 + Math.floor(rng()*100), 120 + Math.floor(rng()*120)];
+      for (let dy = -pr; dy <= pr; dy++) {
+        const rw = Math.round(Math.sqrt(Math.max(0, pr * pr - dy * dy)));
+        if (rw > 0) {
+          row(ctx, py + dy, px - rw, px + rw, ps, color, 0.85);
+        }
       }
     }
-    // Moon crescent cutout for night
-    if (isNight) {
-      const offsetX = Math.floor(sunR * 0.5);
-      const cutColor = gradColor(pal.skyGrad, 0.15);
+    // Nebulae (soft colored bands)
+    const nebulaCount = 1 + Math.floor(rng() * 2);
+    for (let n = 0; n < nebulaCount; n++) {
+      const ny = Math.floor(baseH * (0.2 + 0.5 * rng()));
+      const nh = Math.floor(baseH * (0.08 + 0.12 * rng()));
+      const nebColor: RGB = [100 + Math.floor(rng()*100), 60 + Math.floor(rng()*120), 160 + Math.floor(rng()*80)];
+      ctx.fillStyle = toStyle(nebColor, 0.13 + 0.12*rng());
+      ctx.fillRect(0, ny * ps, opts.outputWidth, nh * ps);
+    }
+  } else {
+    const hasCelestial = opts.environment !== 'cave';
+    if (hasCelestial) {
+      const sunX = Math.floor(baseW * 0.75);
+      const sunY = Math.floor(baseH * 0.2);
+      const sunR = Math.max(2, Math.floor(baseH * 0.08));
+      const sunColor: RGB = isNight ? [230,230,215] : opts.timeOfDay === 'day' ? [255,238,160] : [238,168,80];
       for (let dy = -sunR; dy <= sunR; dy++) {
         const rw = Math.round(Math.sqrt(Math.max(0, sunR * sunR - dy * dy)));
-        const shift = Math.floor(rw * 0.55);
         if (rw > 0) {
-          row(ctx, sunY + dy, sunX - rw + offsetX + shift, sunX + rw, ps, cutColor);
+          row(ctx, sunY + dy, sunX - rw, sunX + rw, ps, sunColor);
+        }
+      }
+      // Moon crescent cutout for night
+      if (isNight) {
+        const offsetX = Math.floor(sunR * 0.5);
+        const cutColor = gradColor(pal.skyGrad, 0.15);
+        for (let dy = -sunR; dy <= sunR; dy++) {
+          const rw = Math.round(Math.sqrt(Math.max(0, sunR * sunR - dy * dy)));
+          const shift = Math.floor(rw * 0.55);
+          if (rw > 0) {
+            row(ctx, sunY + dy, sunX - rw + offsetX + shift, sunX + rw, ps, cutColor);
+          }
         }
       }
     }
@@ -626,6 +665,31 @@ function generateDistantLayer(
     return canvas;
   }
 
+  if (opts.environment === 'space') {
+    // Faint nebula bands and planet silhouettes
+    for (let n = 0; n < 2 + Math.floor(rng()*2); n++) {
+      const ny = Math.floor(baseH * (0.2 + 0.5 * rng()));
+      const nh = Math.floor(baseH * (0.06 + 0.12 * rng()));
+      const nebColor: RGB = [80 + Math.floor(rng()*100), 60 + Math.floor(rng()*120), 180 + Math.floor(rng()*60)];
+      ctx.fillStyle = toStyle(nebColor, 0.10 + 0.10*rng());
+      ctx.fillRect(0, ny * ps, opts.outputWidth, nh * ps);
+    }
+    // Silhouette planets
+    const planetCount = 1 + Math.floor(rng()*2);
+    for (let p = 0; p < planetCount; p++) {
+      const px = Math.floor(baseW * (0.15 + 0.7 * rng()));
+      const py = Math.floor(baseH * (0.45 + 0.3 * rng()));
+      const pr = Math.max(3, Math.floor(baseH * (0.08 + 0.10 * rng())));
+      const color: RGB = [40 + Math.floor(rng()*60), 40 + Math.floor(rng()*60), 80 + Math.floor(rng()*100)];
+      for (let dy = -pr; dy <= pr; dy++) {
+        const rw = Math.round(Math.sqrt(Math.max(0, pr * pr - dy * dy)));
+        if (rw > 0) {
+          row(ctx, py + dy, px - rw, px + rw, ps, color, 0.7);
+        }
+      }
+    }
+    return canvas;
+  }
   if (opts.environment === 'city') {
     profile = buildingProfile(baseW, baseH, opts.density, rng);
   } else {
@@ -682,7 +746,7 @@ function generateMidLayer(
   const canvas = makeClearCanvas(opts.outputWidth, OUTPUT_HEIGHT);
   const ctx = canvas.getContext('2d')!;
 
-  const groundY = Math.floor(baseH * 0.72);
+  // (groundY was unused)
   const densityFactor = opts.density === 'sparse' ? 1 : opts.density === 'medium' ? 1.7 : 2.8;
 
   // Ground silhouette for mid layer
@@ -704,6 +768,40 @@ function generateMidLayer(
     if (tiledBx < 0 || tiledBx >= baseW) continue;
 
     switch (opts.environment) {
+      case 'space': {
+        // Asteroids and larger planets
+        if (rng() > 0.5) {
+          // Asteroid (irregular blob)
+          const points = 5 + Math.floor(rng()*4);
+          const r = Math.floor(size * (0.7 + rng()*0.5));
+          ctx.save();
+          ctx.translate(tiledBx * ps, gY * ps);
+          ctx.beginPath();
+          for (let a = 0; a < points; a++) {
+            const ang = (Math.PI * 2 * a) / points + rng()*0.5;
+            const rad = r * (0.7 + rng()*0.5);
+            ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+          }
+          ctx.closePath();
+          ctx.fillStyle = toStyle([100 + Math.floor(rng()*80), 100 + Math.floor(rng()*80), 120 + Math.floor(rng()*100)]);
+          ctx.globalAlpha = 0.7;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        } else {
+          // Large planet
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(tiledBx * ps, gY * ps, Math.floor(size * (0.7 + rng()*0.5)), 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.fillStyle = toStyle([120 + Math.floor(rng()*100), 80 + Math.floor(rng()*100), 180 + Math.floor(rng()*60)]);
+          ctx.globalAlpha = 0.8;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+        break;
+      }
       case 'forest':
         if (rng() > 0.4) drawPineTree(ctx, tiledBx, gY, ps, size, pal);
         else drawRoundTree(ctx, tiledBx, gY, ps, size, pal);
@@ -793,6 +891,18 @@ function generateForeLayer(
     const dsize = Math.max(1, Math.floor(2 + rng() * 3));
 
     switch (opts.environment) {
+      case 'space': {
+        // Craters and small rocks
+        ctx.save();
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = toStyle([120 + Math.floor(rng()*80), 120 + Math.floor(rng()*80), 160 + Math.floor(rng()*80)]);
+        ctx.beginPath();
+        ctx.ellipse((dx + 0.5) * ps, (dy + 0.5) * ps, dsize * ps, Math.floor(dsize * 0.5) * ps, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.restore();
+        break;
+      }
       case 'forest':
       case 'plains':
       case 'swamp': {
@@ -863,7 +973,7 @@ function generateForeLayer(
 function buildGodotScene(layers: BackgroundLayer[], w: number, h: number): string {
   let out = `[gd_scene format=3]\n\n`;
   out += `[node name="Background" type="ParallaxBackground"]\n\n`;
-  layers.forEach((layer, i) => {
+  layers.forEach((layer) => {
     const safe = layer.name.charAt(0).toUpperCase() + layer.name.slice(1);
     out += `[node name="${safe}Layer" type="ParallaxLayer" parent="."]\n`;
     out += `motion_scale = Vector2(${layer.parallaxScale.toFixed(2)}, 0.0)\n\n`;

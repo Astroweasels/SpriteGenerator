@@ -22,6 +22,7 @@ const ENVIRONMENTS: { id: EnvironmentType; icon: string; label: string }[] = [
   { id: 'swamp',    icon: '🐊', label: 'Swamp'    },
   { id: 'plains',   icon: '🌾', label: 'Plains'   },
   { id: 'city',     icon: '🏙️',  label: 'City'     },
+    { id: 'space',    icon: '🌌', label: 'Space'    },
 ];
 
 const TIMES: { id: TimeOfDay; label: string; icon: string }[] = [

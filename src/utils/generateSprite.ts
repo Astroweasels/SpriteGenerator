@@ -859,7 +859,6 @@ function addEyes(
   pixels: Map<string, Color>,
   size: number,
   style: string,
-  symmetrical: boolean,
   headDy = 0,
 ): void {
   const cx = Math.floor(size / 2);
@@ -1300,7 +1299,7 @@ function makeFrame(
     : applyPoseToPixels(basePixels, size, poseIndex, style);
   // Eyes follow the head offset for the current pose
   const headDy = getHeadDyForPose(poseIndex, size, style);
-  addEyes(px, size, style, true, headDy);
+  addEyes(px, size, style, headDy);
   // Weapon overlay (only for humanoid templates with a weapon)
   if (weapon !== 'none') {
     addWeapon(px, size, weapon, poseIndex, weaponColors);
