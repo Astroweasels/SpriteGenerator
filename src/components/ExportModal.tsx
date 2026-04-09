@@ -1,16 +1,22 @@
+
 import React, { useState } from 'react';
 import type { SpriteSheet } from '../types';
 import { exportFrameAsPNG, exportSpriteSheetAsPNG, exportSpriteSheetPack, downloadDataURL } from '../utils/exportUtils';
 import type { ExportFormat } from '../utils/exportUtils';
+import { createAssetPackZip } from '../utils/zipUtils';
 import './ExportModal.css';
+
 
 interface ExportModalProps {
   spriteSheet: SpriteSheet;
   activeFrameIndex: number;
   onClose: () => void;
+  backgrounds?: { composite: string; layers: { name: string; dataUrl: string }[] };
+  music?: { base64: string; filename: string };
+  sfx?: { base64: string; filename: string };
 }
 
-type ExportTarget = 'current-frame' | 'all-frames' | 'sprite-sheet' | 'sprite-sheet-pack';
+type ExportTarget = 'current-frame' | 'all-frames' | 'sprite-sheet' | 'sprite-sheet-pack' | 'asset-pack';
 
 export const ExportModal: React.FC<ExportModalProps> = ({
   spriteSheet,
@@ -24,7 +30,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const [perSequence, setPerSequence] = useState(true);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('generic');
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'sprite';
 
     switch (target) {
@@ -52,6 +58,29 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       }
       case 'sprite-sheet-pack': {
         exportSpriteSheetPack(spriteSheet, scale, columns, sanitizedName, perSequence, exportFormat);
+        break;
+      }
+      case 'asset-pack': {
+        // Build manifest and engine formats
+        const manifest = JSON.stringify({/* ...minimal manifest for now... */}, null, 2);
+        // For now, use the same PNG and manifest as sprite-sheet-pack
+        const spriteSheetPng = exportSpriteSheetAsPNG(spriteSheet, scale, columns);
+        // TODO: Get engine formats from exportUtils if needed
+        const engineFormats: Record<string, string> = {};
+        // Compose asset pack
+        const zipBlob = await createAssetPackZip({
+          spriteSheetPng,
+          manifestJson: manifest,
+          engineFormats,
+          backgrounds,
+          music,
+          sfx,
+          fileName: sanitizedName,
+        });
+        // Download ZIP
+        const url = URL.createObjectURL(zipBlob);
+        downloadDataURL(url, `${sanitizedName}_asset_pack.zip`);
+        URL.revokeObjectURL(url);
         break;
       }
     }
@@ -112,13 +141,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               >
                 <span className="target-icon">🖼️</span>
                 <span>Current Frame</span>
+              <button
+                className={`export-target ${target === 'sprite-sheet-pack' ? 'active' : ''}`}
+                onClick={() => setTarget('sprite-sheet-pack')}
+              >
+                <span className="target-icon">📦</span>
+                <span>Sprite Sheet Pack (PNG + JSON)</span>
               </button>
               <button
-                className={`export-target ${target === 'all-frames' ? 'active' : ''}`}
-                onClick={() => setTarget('all-frames')}
+                className={`export-target ${target === 'asset-pack' ? 'active' : ''}`}
+                onClick={() => setTarget('asset-pack')}
               >
-                <span className="target-icon">📁</span>
-                <span>All Frames (Individual)</span>
+                <span className="target-icon">🗂️</span>
+                <span>Asset Pack (ZIP)</span>
+              </button>
               </button>
               <button
                 className={`export-target ${target === 'sprite-sheet' ? 'active' : ''}`}

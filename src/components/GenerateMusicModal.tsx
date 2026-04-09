@@ -7,12 +7,12 @@ interface GenerateMusicModalProps {
   loading?: boolean;
 }
 
-export interface GenerateMusicParams {
+export type GenerateMusicParams = {
   style: string;
   mood: string;
   lengthSeconds: number;
   tempo?: number;
-}
+};
 
 const STYLES = [
   'chiptune', 'orchestral', 'synthwave', 'lo-fi', 'jazz', 'rock', 'ambient', 'random',

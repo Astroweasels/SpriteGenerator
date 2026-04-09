@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { GenerateMusicModal, GenerateMusicParams } from './components/GenerateMusicModal';
+import { GenerateMusicModal, type GenerateMusicParams } from './components/GenerateMusicModal';
 import type { BackgroundResult } from './utils/generateBackground';
 import type { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
 import {
@@ -62,6 +62,13 @@ function App() {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [musicLoading, setMusicLoading] = useState(false);
+  // Store last generated music for asset pack export
+  const [lastMusic, setLastMusic] = useState<{
+    params: GenerateMusicParams;
+    audioUrl: string;
+    format: string;
+    base64?: string;
+  } | null>(null);
   const [newWidth, setNewWidth] = useState(32);
   const [newHeight, setNewHeight] = useState(32);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
@@ -547,12 +554,20 @@ function App() {
       if (!res.ok) throw new Error('Failed to generate music');
       const data = await res.json();
       if (data && data.audio && data.format) {
+        // Download as before
         const link = document.createElement('a');
         link.href = data.audio;
         link.download = `music_${params.style}_${params.mood}.${data.format}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        // Store for asset pack export
+        setLastMusic({
+          params,
+          audioUrl: data.audio,
+          format: data.format,
+          base64: data.audio.startsWith('data:') ? data.audio : undefined,
+        });
       } else {
         alert('Music generation failed.');
       }
@@ -811,15 +826,8 @@ function App() {
         <AboutModal onClose={() => setShowAbout(false)} />
       )}
 
-      {showExportModal && (
-        <ExportModal
-          spriteSheet={spriteSheet}
-          activeFrameIndex={activeFrameIndex}
-          onClose={() => setShowExportModal(false)}
-        />
-      )}
 
-      {showNewDialog && (
+      {showExportModal && (
         <div className="modal-overlay" onClick={() => setShowNewDialog(false)}>
           <div className="new-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
