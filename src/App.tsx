@@ -543,10 +543,12 @@ function App() {
   };
 
   // ---- Music Generation ----
+  const API_BASE = import.meta.env.VITE_API_BASE || 'https://api.astrosprite.com';
+
   const handleGenerateMusic = async (params: GenerateMusicParams) => {
     setMusicLoading(true);
     try {
-      const res = await fetch('/api/generate-music', {
+      const res = await fetch(`${API_BASE}/generate-music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
