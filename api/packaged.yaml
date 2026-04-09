@@ -1,15 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SpriteForge API — headless sprite generation service
-
 Globals:
   Function:
     Timeout: 30
     MemorySize: 512
     Runtime: nodejs22.x
     Architectures:
-      - x86_64
-
+    - x86_64
 Parameters:
   StageName:
     Type: String
@@ -22,132 +20,141 @@ Parameters:
     Type: Number
     Default: 20
     Description: Max concurrent requests
-
 Resources:
-  # --- S3 Bucket for generated sprites ---
   SpriteBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub 'spriteforge-sprites-${AWS::AccountId}'
+      BucketName:
+        Fn::Sub: spriteforge-sprites-${AWS::AccountId}
       LifecycleConfiguration:
         Rules:
-          - Id: AutoDeleteSprites
-            Status: Enabled
-            ExpirationInDays: 1
+        - Id: AutoDeleteSprites
+          Status: Enabled
+          ExpirationInDays: 1
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-
-  # --- API Gateway ---
   SpriteForgeApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      StageName: !Ref StageName
+      StageName:
+        Ref: StageName
       CorsConfiguration:
         AllowOrigins:
-          - '*'
+        - '*'
         AllowMethods:
-          - POST
-          - GET
-          - OPTIONS
+        - POST
+        - GET
+        - OPTIONS
         AllowHeaders:
-          - Content-Type
-          - x-api-key
+        - Content-Type
+        - x-api-key
       DefaultRouteSettings:
-        ThrottlingRateLimit: !Ref ThrottleRateLimit
-        ThrottlingBurstLimit: !Ref ThrottleBurstLimit
-
-  # --- Lambda Function ---
+        ThrottlingRateLimit:
+          Ref: ThrottleRateLimit
+        ThrottlingBurstLimit:
+          Ref: ThrottleBurstLimit
   GenerateFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: handler.handler
-      CodeUri: dist/
+      CodeUri: 
+        s3://aws-sam-cli-managed-default-samclisourcebucket-yieupocc9n4d/7440e151436ec27f4b9671dcd23ae9e2
       Environment:
         Variables:
-          SPRITE_BUCKET: !Ref SpriteBucket
+          SPRITE_BUCKET:
+            Ref: SpriteBucket
       Policies:
-        - S3CrudPolicy:
-            BucketName: !Ref SpriteBucket
+      - S3CrudPolicy:
+          BucketName:
+            Ref: SpriteBucket
       Events:
         GenerateSprite:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /generate
             Method: POST
         HealthCheck:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /health
             Method: GET
         SwaggerDocs:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /docs
             Method: GET
         OpenApiSpec:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /openapi.yaml
             Method: GET
         DrawSprite:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /draw
             Method: POST
         ImportSprite:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /import
             Method: POST
         ExportSprite:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /export
             Method: POST
         ManageLayers:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /layers
             Method: POST
         ManageFrames:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /frames
             Method: POST
         ResizeCanvas:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /resize
             Method: POST
         GenerateBackground:
           Type: HttpApi
           Properties:
-            ApiId: !Ref SpriteForgeApi
+            ApiId:
+              Ref: SpriteForgeApi
             Path: /generate-background
             Method: POST
-
-  # --- Usage Plan (for API key throttling via REST API, optional) ---
-  # Note: HttpApi (API Gateway v2) does not natively support API keys.
-  # For API key enforcement, add a Lambda authorizer or migrate to REST API.
-  # The ThrottleConfig above provides rate limiting without keys.
-
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL
-    Value: !Sub 'https://${SpriteForgeApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}'
+    Value:
+      Fn::Sub: 
+        https://${SpriteForgeApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
   SpriteBucketName:
     Description: S3 bucket for generated sprites
-    Value: !Ref SpriteBucket
+    Value:
+      Ref: SpriteBucket

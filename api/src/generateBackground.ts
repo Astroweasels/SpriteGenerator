@@ -2,7 +2,7 @@
 // Mirrors the frontend generateBackground.ts but uses @napi-rs/canvas.
 // The drawing logic is intentionally kept in sync with the browser version.
 
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, Image } from '@napi-rs/canvas';
 import type {
   BackgroundRequest,
   BackgroundLayerResponse,
@@ -660,7 +660,7 @@ export function generateBackgroundAPI(req: BackgroundRequest): BackgroundRespons
   chosen.forEach(buf => {
     const layerCanvas = createCanvas(req.outputWidth, OUTPUT_HEIGHT);
     const lCtx = layerCanvas.getContext('2d');
-    const img = new (require('@napi-rs/canvas').Image)();
+    const img = new Image();
     img.src = buf;
     lCtx.drawImage(img, 0, 0);
     compCtx.drawImage(layerCanvas, 0, 0);
