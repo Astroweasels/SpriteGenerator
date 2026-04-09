@@ -6,7 +6,7 @@ import './GenerateModal.css'; // reuse shared modal shell styles
 
 interface BackgroundModalProps {
   onClose: () => void;
-  onEditInCanvas?: (dataUrl: string, width: number, height: number) => void;
+  onEditBackgroundLayer?: (result: BackgroundResult, layerIndex: number) => void;
 }
 
 // ── Environment metadata ──────────────────────────────────────────────────────
@@ -342,12 +342,12 @@ export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose, onEdi
                       >
                         ⬇ PNG
                       </button>
-                      {onEditInCanvas && (
+                      {onEditBackgroundLayer && (
                         <button
                           className="copy-btn"
                           style={{ fontSize: '10px', padding: '3px 8px', borderColor: '#44aa88', color: '#88ddaa' }}
-                          onClick={() => onEditInCanvas(layer.dataUrl, result.width, result.height)}
-                          title="Load this layer into the pixel editor"
+                          onClick={() => onEditBackgroundLayer(result, result.layers.findIndex(l => l.name === layer.name))}
+                          title="Edit this layer in the main editor"
                         >
                           ✏️ Edit
                         </button>

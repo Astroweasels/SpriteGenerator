@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import type { BackgroundResult } from './utils/generateBackground';
 import type { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
 import {
   createSpriteSheet,
@@ -32,6 +33,14 @@ import './App.css';
 
 function App() {
   const [spriteSheet, setSpriteSheet] = useState<SpriteSheet>(() => createSpriteSheet(32, 32));
+  // Background edit mode state
+  const [backgroundEdit, setBackgroundEdit] = useState<{
+    result: BackgroundResult;
+    layerIndex: number;
+    spriteSheetBackup: SpriteSheet;
+    activeFrameIndexBackup: number;
+    activeSequenceIdBackup: string;
+  } | null>(null);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
   const [activeSequenceId, setActiveSequenceId] = useState<string>('');
   const [currentColor, setCurrentColor] = useState<Color>({ r: 0, g: 0, b: 0, a: 255 });
@@ -678,38 +687,74 @@ function App() {
       {showBackgroundModal && (
         <BackgroundModal
           onClose={() => setShowBackgroundModal(false)}
-          onEditInCanvas={async (dataUrl: string, width: number, height: number) => {
-            try {
-              const res = await fetch(dataUrl);
+          onEditBackgroundLayer={(
+            result: BackgroundResult,
+            layerIndex: number
+          ) => {
+            // Backup current sprite sheet and state
+            setBackgroundEdit({
+              result,
+              layerIndex,
+              spriteSheetBackup: spriteSheet,
+              activeFrameIndexBackup: activeFrameIndex,
+              activeSequenceIdBackup: activeSequenceId,
+            });
+            // Convert background layers to frames/layers for editing
+            const frames = result.layers.map((layer, i) => ({
+              id: `bg-frame-${i}`,
+              name: layer.name,
+              layers: [{
+                id: `bg-layer-${i}`,
+                name: layer.name,
+                pixels: new Map(), // Will be filled by importPng below
+                visible: true,
+                opacity: 1,
+              }],
+              activeLayerId: `bg-layer-${i}`,
+            }));
+            // Import each PNG into the frame's layer
+            Promise.all(result.layers.map(async (layer, i) => {
+              const res = await fetch(layer.dataUrl);
               const blob = await res.blob();
-              const file = new File([blob], 'background_layer.png', { type: 'image/png' });
-              const { pixels, width: pw, height: ph } = await importPng(file, 640);
-              saveUndo();
-              setSpriteSheet(prev => {
-                const frame = prev.frames[activeFrameIndex];
-                if (!frame) return prev;
-                return {
-                  ...prev,
-                  width: pw,
-                  height: ph,
-                  frames: prev.frames.map((f, i) => {
-                    if (i !== activeFrameIndex) return f;
-                    return {
-                      ...f,
-                      layers: f.layers.map(l =>
-                        l.id === frame.activeLayerId ? { ...l, pixels } : l
-                      ),
-                    };
-                  }),
-                };
+              const file = new File([blob], `${layer.name}.png`, { type: 'image/png' });
+              const { pixels } = await importPng(file, result.width);
+              frames[i].layers[0].pixels = pixels;
+            })).then(() => {
+              setSpriteSheet({
+                frames,
+                sequences: [{
+                  id: 'bg-seq',
+                  name: 'Background Layers',
+                  frameIds: frames.map(f => f.id),
+                }],
+                width: result.width,
+                height: result.height,
               });
-              requestAnimationFrame(() => setZoom(computeFitZoom(pw, ph)));
+              setActiveFrameIndex(layerIndex);
+              setActiveSequenceId('bg-seq');
               setShowBackgroundModal(false);
-            } catch {
-              // silently ignore
-            }
+            });
           }}
         />
+      )}
+      {/* Show return to backgrounds button in background edit mode */}
+      {backgroundEdit && (
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
+          <button
+            style={{ padding: '8px 20px', fontSize: 16, background: '#3355aa', color: '#fff', border: 'none', borderRadius: 8, boxShadow: '0 2px 8px #0006', cursor: 'pointer' }}
+            onClick={() => {
+              // Optionally, update the backgroundEdit.result with new data from spriteSheet
+              // For now, just restore previous state
+              setSpriteSheet(backgroundEdit.spriteSheetBackup);
+              setActiveFrameIndex(backgroundEdit.activeFrameIndexBackup);
+              setActiveSequenceId(backgroundEdit.activeSequenceIdBackup);
+              setBackgroundEdit(null);
+              setShowBackgroundModal(true);
+            }}
+          >
+            ← Return to Backgrounds
+          </button>
+        </div>
       )}
 
       {showHelp && (
