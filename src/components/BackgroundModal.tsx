@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useRef } from 'react';
-import type { BackgroundOptions, BackgroundResult, EnvironmentType, TimeOfDay, WeatherType } from '../utils/generateBackground';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import type { BackgroundOptions, BackgroundResult, EnvironmentType, TimeOfDay, WeatherType, Topography } from '../utils/generateBackground';
 import { generateBackground } from '../utils/generateBackground';
 import './BackgroundModal.css';
 import './GenerateModal.css'; // reuse shared modal shell styles
 
 interface BackgroundModalProps {
   onClose: () => void;
+  onEditInCanvas?: (dataUrl: string, width: number, height: number) => void;
 }
 
 // ── Environment metadata ──────────────────────────────────────────────────────
@@ -38,6 +39,13 @@ const WEATHERS: { id: WeatherType; label: string; icon: string }[] = [
   { id: 'rainy',  label: 'Rainy',  icon: '🌧️' },
 ];
 
+const TOPOGRAPHIES: { id: Topography; label: string; icon: string }[] = [
+  { id: 'flat',      label: 'Flat',      icon: '〰️' },
+  { id: 'rolling',   label: 'Rolling',   icon: '🌊' },
+  { id: 'mountains', label: 'Mountains', icon: '🏔️' },
+  { id: 'jagged',    label: 'Jagged',    icon: '⛰️' },
+];
+
 // ── Speed tier for parallax CSS (0=static, 1=slowest, 4=fastest) ─────────────
 function speedTier(scale: number): number {
   if (scale === 0) return 0;
@@ -56,37 +64,16 @@ function downloadDataUrl(dataUrl: string, filename: string): void {
   a.click();
 }
 
-async function downloadZip(result: BackgroundResult, env: string): Promise<void> {
-  // Use JSZip if available, otherwise fall back to sequential downloads
-  try {
-    // @ts-ignore — optional peer dep
-    const JSZip = (await import('jszip')).default;
-    const zip = new JSZip();
-    const folder = zip.folder(`${env}_bg`)!;
-
-    result.layers.forEach(layer => {
-      const base64 = layer.dataUrl.split(',')[1];
-      folder.file(`${layer.name}.png`, base64, { base64: true });
-    });
-    folder.file('composite.png', result.composite.split(',')[1], { base64: true });
-    folder.file('godot_scene.tscn', result.godotScene);
-
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(blob);
-    downloadDataUrl(url, `${env}_background.zip`);
-    URL.revokeObjectURL(url);
-  } catch {
-    // JSZip not installed — fall back to individual downloads
-    result.layers.forEach((layer, i) => {
-      setTimeout(() => downloadDataUrl(layer.dataUrl, `${env}_${layer.name}.png`), i * 150);
-    });
-    setTimeout(() => downloadDataUrl(result.composite, `${env}_composite.png`), result.layers.length * 150);
-  }
+function downloadZip(result: BackgroundResult, env: string): void {
+  result.layers.forEach((layer, i) => {
+    setTimeout(() => downloadDataUrl(layer.dataUrl, `${env}_${layer.name}.png`), i * 150);
+  });
+  setTimeout(() => downloadDataUrl(result.composite, `${env}_composite.png`), result.layers.length * 150);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose }) => {
+export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose, onEditInCanvas }) => {
   const [opts, setOpts] = useState<BackgroundOptions>({
     environment: 'forest',
     timeOfDay: 'day',
@@ -103,24 +90,30 @@ export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose }) => 
   const [showGodot, setShowGodot] = useState(false);
   const [copied, setCopied] = useState(false);
   const genIdRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = useCallback((options: BackgroundOptions) => {
     setGenerating(true);
     const id = ++genIdRef.current;
-
-    // Defer to next tick so UI updates before heavy canvas work
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (genIdRef.current !== id) return;
         try {
-          const bg = generateBackground(opts);
+          const bg = generateBackground(options);
           setResult(bg);
         } finally {
           setGenerating(false);
         }
       });
     });
-  }, [opts]);
+  }, []);
+
+  // Auto-generate whenever options change (debounced 80ms)
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => handleGenerate(opts), 80);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [opts, handleGenerate]);
 
   const handleCopyGodot = () => {
     if (!result) return;
@@ -191,6 +184,25 @@ export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose }) => 
               ))}
             </div>
           </div>
+
+          {/* Topography */}
+          {opts.environment !== 'cave' && opts.environment !== 'city' && (
+            <div className="form-group">
+              <label>Topography <span className="label-hint">(overrides biome default)</span></label>
+              <div className="time-row">
+                {TOPOGRAPHIES.map(t => (
+                  <button
+                    key={t.id}
+                    className={`option-btn ${(opts.topography ?? '') === t.id ? 'active' : ''}`}
+                    onClick={() => set('topography', opts.topography === t.id ? undefined : t.id)}
+                    title={opts.topography === t.id ? 'Click to reset to biome default' : ''}
+                  >
+                    {t.icon} {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Controls row */}
           <div className="control-row">
@@ -314,8 +326,33 @@ export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose }) => 
               <div className="layer-thumbs">
                 {result.layers.map(layer => (
                   <div key={layer.name} className="layer-thumb">
-                    <img src={layer.dataUrl} alt={layer.name} />
+                    <img
+                      src={layer.dataUrl}
+                      alt={layer.name}
+                      style={{ border: '1px solid #44aa88', cursor: 'pointer' }}
+                      onClick={() => downloadDataUrl(layer.dataUrl, `${opts.environment}_${layer.name}.png`)}
+                      title="Click to download"
+                    />
                     <span className="layer-thumb-label">{layer.name} (×{layer.parallaxScale.toFixed(2)})</span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        className="copy-btn"
+                        style={{ fontSize: '10px', padding: '3px 8px' }}
+                        onClick={() => downloadDataUrl(layer.dataUrl, `${opts.environment}_${layer.name}.png`)}
+                      >
+                        ⬇ PNG
+                      </button>
+                      {onEditInCanvas && (
+                        <button
+                          className="copy-btn"
+                          style={{ fontSize: '10px', padding: '3px 8px', borderColor: '#44aa88', color: '#88ddaa' }}
+                          onClick={() => onEditInCanvas(layer.dataUrl, result.width, result.height)}
+                          title="Load this layer into the pixel editor"
+                        >
+                          ✏️ Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -335,7 +372,7 @@ export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose }) => 
                 </button>
                 <button
                   className="btn-secondary"
-                  onClick={() => downloadZip(result, opts.environment)}
+                  onClick={() => { downloadZip(result, opts.environment); }}
                 >
                   🗜️ All Layers (ZIP)
                 </button>
@@ -365,10 +402,8 @@ export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose }) => 
         </div>
 
         <div className="modal-footer">
+          {generating && <span className="bg-generating" style={{ marginRight: 'auto' }}>Updating…</span>}
           <button className="btn-secondary" onClick={onClose}>Close</button>
-          <button className="btn-primary" onClick={handleGenerate} disabled={generating}>
-            {generating ? '⏳ Generating…' : '🌄 Generate Background'}
-          </button>
         </div>
       </div>
     </div>

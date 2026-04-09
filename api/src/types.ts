@@ -263,10 +263,14 @@ export type BackgroundEnvironment =
 export type BackgroundTimeOfDay = 'day' | 'dusk' | 'night' | 'dawn';
 export type BackgroundWeather = 'clear' | 'foggy' | 'stormy' | 'snowy' | 'rainy';
 
+export type BackgroundTopography = 'flat' | 'rolling' | 'mountains' | 'jagged';
+
 export interface BackgroundRequest {
   environment: BackgroundEnvironment;
   timeOfDay: BackgroundTimeOfDay;
   weather: BackgroundWeather;
+  /** Override the biome's default topography for the distant layer */
+  topography?: BackgroundTopography;
   /** Number of parallax layers to generate (2-4) */
   layerCount: 2 | 3 | 4;
   /** Base pixel size — 2 = chunky 2×2, 4 = very chunky 4×4 */

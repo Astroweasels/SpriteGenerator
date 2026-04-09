@@ -372,10 +372,15 @@ export async function handler(
       const outputWidth = Number(b.outputWidth ?? 320);
       if (![160,320,640].includes(outputWidth)) throw new Error('"outputWidth" must be 160, 320, or 640');
 
+      const topography = b.topography as string | undefined;
+      if (topography && !['flat','rolling','mountains','jagged'].includes(topography))
+        throw new Error('"topography" must be flat, rolling, mountains, or jagged');
+
       const bgReq: BackgroundRequest = {
         environment: b.environment as BackgroundRequest['environment'],
         timeOfDay: b.timeOfDay as BackgroundRequest['timeOfDay'],
         weather: b.weather as BackgroundRequest['weather'],
+        ...(topography ? { topography: topography as BackgroundRequest['topography'] } : {}),
         layerCount: layerCount as 2|3|4,
         pixelSize: pixelSize as 2|4,
         density: density as BackgroundRequest['density'],

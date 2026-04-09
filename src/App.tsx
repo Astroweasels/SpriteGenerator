@@ -678,6 +678,37 @@ function App() {
       {showBackgroundModal && (
         <BackgroundModal
           onClose={() => setShowBackgroundModal(false)}
+          onEditInCanvas={async (dataUrl: string, width: number, height: number) => {
+            try {
+              const res = await fetch(dataUrl);
+              const blob = await res.blob();
+              const file = new File([blob], 'background_layer.png', { type: 'image/png' });
+              const { pixels, width: pw, height: ph } = await importPng(file, 640);
+              saveUndo();
+              setSpriteSheet(prev => {
+                const frame = prev.frames[activeFrameIndex];
+                if (!frame) return prev;
+                return {
+                  ...prev,
+                  width: pw,
+                  height: ph,
+                  frames: prev.frames.map((f, i) => {
+                    if (i !== activeFrameIndex) return f;
+                    return {
+                      ...f,
+                      layers: f.layers.map(l =>
+                        l.id === frame.activeLayerId ? { ...l, pixels } : l
+                      ),
+                    };
+                  }),
+                };
+              });
+              requestAnimationFrame(() => setZoom(computeFitZoom(pw, ph)));
+              setShowBackgroundModal(false);
+            } catch {
+              // silently ignore
+            }
+          }}
         />
       )}
 
@@ -709,6 +740,31 @@ function App() {
               <button className="modal-close" onClick={() => setShowNewDialog(false)}>✕</button>
             </div>
             <div className="modal-body">
+              <div className="form-group">
+                <label style={{ fontSize: '12px', color: '#8888aa', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Presets</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { label: '32×32 Sprite', w: 32, h: 32 },
+                    { label: '64×64 Sprite', w: 64, h: 64 },
+                    { label: '160×90 BG', w: 160, h: 90 },
+                    { label: '320×180 BG', w: 320, h: 180 },
+                    { label: '640×180 BG', w: 640, h: 180 },
+                  ].map(p => (
+                    <button
+                      key={p.label}
+                      onClick={() => { setNewWidth(p.w); setNewHeight(p.h); }}
+                      style={{
+                        padding: '6px 12px', border: '1px solid #333355', borderRadius: '6px',
+                        background: newWidth === p.w && newHeight === p.h ? '#3355aa' : '#1a1a2e',
+                        color: newWidth === p.w && newHeight === p.h ? '#fff' : '#aaaacc',
+                        cursor: 'pointer', fontSize: '12px',
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="form-row">
                 <div className="form-group">
                   <label>Width</label>
@@ -720,6 +776,9 @@ function App() {
                     <option value={48}>48</option>
                     <option value={64}>64</option>
                     <option value={128}>128</option>
+                    <option value={160}>160</option>
+                    <option value={320}>320</option>
+                    <option value={640}>640</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -731,7 +790,9 @@ function App() {
                     <option value={32}>32</option>
                     <option value={48}>48</option>
                     <option value={64}>64</option>
+                    <option value={90}>90</option>
                     <option value={128}>128</option>
+                    <option value={180}>180</option>
                   </select>
                 </div>
               </div>

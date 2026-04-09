@@ -188,6 +188,23 @@ function rollProfile(baseW: number, baseH: number, minFrac: number, maxFrac: num
   });
 }
 
+function flatProfile(baseW: number, baseH: number, frac: number, tileable: boolean, rng: Rng): number[] {
+  const base = Math.round(baseH * frac);
+  const pi2 = Math.PI * 2;
+  const seed1 = rng() * 10;
+  const freq = tileable ? pi2 * Math.round(2 + rng() * 2) / baseW : pi2 * (2 + rng()) / baseW;
+  return Array.from({ length: baseW }, (_, x) => {
+    const wave = Math.sin(x * freq + seed1) * Math.round(baseH * 0.025);
+    return Math.round(base + wave);
+  });
+}
+
+const DEFAULT_TOPOGRAPHY: Record<string, string> = {
+  forest:'rolling', desert:'flat', cave:'flat', ocean:'flat',
+  ruins:'rolling', tundra:'mountains', volcanic:'jagged',
+  swamp:'flat', plains:'flat', city:'flat',
+};
+
 function jaggProfile(baseW: number, baseH: number, minFrac: number, maxFrac: number, tileable: boolean, rng: Rng): number[] {
   const smooth = rollProfile(baseW, baseH, minFrac, maxFrac, tileable, rng);
   const spikeCount = Math.floor(2 + rng() * 3);
@@ -435,10 +452,14 @@ function buildDistantLayer(req: BackgroundRequest, pal: Palette, rng: Rng): Buff
     return canvas.toBuffer('image/png');
   } else if (req.environment === 'city') {
     profile = buildingProfile(baseW, baseH, req.density, rng);
-  } else if (req.environment === 'tundra' || req.environment === 'volcanic') {
-    profile = jaggProfile(baseW, baseH, 0.28, 0.58, req.tileable, rng);
   } else {
-    profile = rollProfile(baseW, baseH, 0.32, 0.62, req.tileable, rng);
+    const topo = req.topography ?? DEFAULT_TOPOGRAPHY[req.environment] ?? 'rolling';
+    switch (topo) {
+      case 'flat':      profile = flatProfile(baseW, baseH, 0.52, req.tileable, rng); break;
+      case 'mountains': profile = rollProfile(baseW, baseH, 0.25, 0.55, req.tileable, rng); break;
+      case 'jagged':    profile = jaggProfile(baseW, baseH, 0.28, 0.58, req.tileable, rng); break;
+      default:          profile = rollProfile(baseW, baseH, 0.38, 0.60, req.tileable, rng); break;
+    }
   }
 
   ctx.fillStyle = toStyle(pal.distant);

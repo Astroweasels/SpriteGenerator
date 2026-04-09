@@ -1,21 +1,22 @@
 openapi: 3.1.0
 info:
   title: AstroSprite API
-  version: 3.0.0
+  version: 3.1.0
   description: |
-    Generate pixel art sprites, draw on them, manage layers and frames,
-    import PNGs, and export finished sprite sheets — all via REST.
-    Designed for AI agents to create and edit game-ready character assets.
+    Generate pixel art sprites and backgrounds, draw on them, manage layers and frames,
+    import PNGs, and export finished assets — all via REST.
+    Designed for AI agents to create and edit game-ready art.
 
     ## Quick start for AI agents
 
-    1. **Generate** — `POST /generate` with a template or style to get a sprite.
-    2. **Edit** — `POST /draw` with drawing operations to modify pixels.
-    3. **Layers** — `POST /layers` to add, merge, reorder, or manage layers.
-    4. **Frames** — `POST /frames` to add/delete/duplicate animation frames.
-    5. **Import** — `POST /import` with a base64 PNG to bring in external art.
-    6. **Export** — `POST /export` to render the sprite as PNGs.
-    7. **Resize** — `POST /resize` to change canvas dimensions.
+    1. **Generate sprite** — `POST /generate` with a template or style to get a sprite.
+    2. **Generate background** — `POST /generate-background` to get parallax background layers.
+    3. **Edit** — `POST /draw` with drawing operations to modify pixels.
+    4. **Layers** — `POST /layers` to add, merge, reorder, or manage layers.
+    5. **Frames** — `POST /frames` to add/delete/duplicate animation frames.
+    6. **Import** — `POST /import` with a base64 PNG to bring in external art.
+    7. **Export** — `POST /export` to render the sprite as PNGs.
+    8. **Resize** — `POST /resize` to change canvas dimensions.
 
     All editing endpoints accept and return a **SpriteData** object — a JSON-safe
     representation of the full sprite state. Pass it between calls to chain operations.
@@ -687,6 +688,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /generate-background:
+    post:
+      operationId: generateBackground
+      summary: Generate a pixel-art parallax background
+      description: |
+        Procedurally generates 2–4 pixel-art parallax background layers for a given
+        environment, time of day, and weather. Returns each layer as a base64 PNG
+        plus a flat composite and a Godot 4 ParallaxBackground scene snippet.
+
+        ## Agent workflow
+
+        1. Call `POST /generate-background` to get layers.
+        2. Optionally pass any layer's `png` value into `POST /import` to load it
+           into a sprite canvas for further pixel editing via `POST /draw`.
+        3. Call `POST /export` on the edited sprite data to get the final PNG.
+
+        ## Reproducibility
+
+        Pass a `seed` integer to get the same output every time. Omit it for a
+        random result on each call.
+      tags: [Background]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackgroundRequest'
+            examples:
+              forest_dusk:
+                summary: Forest at dusk, 4 layers
+                value:
+                  environment: forest
+                  timeOfDay: dusk
+                  weather: foggy
+                  topography: rolling
+                  layerCount: 4
+                  pixelSize: 2
+                  density: medium
+                  tileable: true
+                  outputWidth: 320
+              city_night:
+                summary: City at night, 3 layers
+                value:
+                  environment: city
+                  timeOfDay: night
+                  weather: rainy
+                  layerCount: 3
+                  pixelSize: 2
+                  density: dense
+                  tileable: true
+                  outputWidth: 320
+              volcanic_dawn:
+                summary: Volcanic at dawn, jagged topography
+                value:
+                  environment: volcanic
+                  timeOfDay: dawn
+                  weather: stormy
+                  topography: jagged
+                  layerCount: 4
+                  pixelSize: 2
+                  density: medium
+                  tileable: true
+                  outputWidth: 640
+                  seed: 42
+      responses:
+        '200':
+          description: Background generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackgroundResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     ColorRGB:
@@ -1239,3 +1324,95 @@ components:
           type: integer
           minimum: 1
           maximum: 128
+
+    BackgroundRequest:
+      type: object
+      required: [environment, timeOfDay, weather, layerCount, pixelSize, density, tileable, outputWidth]
+      properties:
+        environment:
+          type: string
+          enum: [forest, desert, cave, ocean, ruins, tundra, volcanic, swamp, plains, city]
+          description: Biome/setting for the background.
+        timeOfDay:
+          type: string
+          enum: [day, dusk, night, dawn]
+          description: Controls sky gradient and color temperature.
+        weather:
+          type: string
+          enum: [clear, foggy, stormy, snowy, rainy]
+          description: Atmospheric overlay effects.
+        topography:
+          type: string
+          enum: [flat, rolling, mountains, jagged]
+          description: |
+            Shape of the distant horizon silhouette. If omitted each biome uses its
+            own sensible default (ocean=flat, forest=rolling, tundra=mountains, volcanic=jagged).
+        layerCount:
+          type: integer
+          enum: [2, 3, 4]
+          description: |
+            Number of parallax layers to return.
+            2 = sky + foreground,
+            3 = sky + midground + foreground,
+            4 = sky + distant + midground + foreground.
+        pixelSize:
+          type: integer
+          enum: [2, 4]
+          description: Base pixel block size. 2 = standard chunky pixel art, 4 = very chunky.
+        density:
+          type: string
+          enum: [sparse, medium, dense]
+          description: How many environment elements (trees, rocks, buildings) to place.
+        tileable:
+          type: boolean
+          description: Whether layers should loop seamlessly for side-scrolling games.
+        outputWidth:
+          type: integer
+          enum: [160, 320, 640]
+          description: Output width in pixels. Height is always 180px.
+        seed:
+          type: integer
+          description: |
+            Optional seed for reproducible results. Omit for a random output.
+            Pass the same seed with the same parameters to regenerate an identical background.
+
+    BackgroundLayerResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Layer name — sky, distant, midground, or foreground.
+        png:
+          type: string
+          description: Base64 data URI of the layer PNG (data:image/png;base64,...).
+        parallaxScale:
+          type: number
+          description: |
+            Suggested horizontal scroll factor for this layer.
+            0.0 = static (sky), 0.15–0.4 = slow distant layers, 0.8 = fast foreground.
+
+    BackgroundResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BackgroundLayerResponse'
+          description: Individual parallax layers in back-to-front order.
+        composite:
+          type: string
+          description: Flat composite of all layers as a base64 data URI PNG.
+        width:
+          type: integer
+          description: Output width in pixels (matches request outputWidth).
+        height:
+          type: integer
+          description: Output height in pixels (always 180).
+        godotScene:
+          type: string
+          description: |
+            Ready-to-paste Godot 4 ParallaxBackground scene snippet (.tscn format).
+            Texture paths are commented placeholders — replace with your actual asset paths.

@@ -7,6 +7,7 @@ interface HelpModalProps {
 
 const sections = [
   { id: 'header', label: 'Header Buttons' },
+  { id: 'background', label: 'Background Generator' },
   { id: 'presets', label: 'Preset Bar' },
   { id: 'toolbar', label: 'Drawing Tools' },
   { id: 'canvas', label: 'Canvas' },
@@ -45,9 +46,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><th>Button</th><th>What it does</th></tr>
               </thead>
               <tbody>
-                <tr><td>📄 New</td><td>Create a blank canvas. Choose width and height (8–128 px).</td></tr>
-                <tr><td>📂 Import PNG</td><td>Load a PNG file onto the active layer. The canvas resizes to fit (up to 128×128). Great for tweaking API-generated sprites.</td></tr>
-                <tr><td>🎲 Generate Assets</td><td>Open the generator dialog — pick style, size, color scheme, and complexity to auto-create a sprite.</td></tr>
+                <tr><td>📄 New</td><td>Create a blank canvas. Choose a preset size (sprite or background) or set custom width and height.</td></tr>
+                <tr><td>📂 Import PNG</td><td>Load a PNG file onto the active layer. The canvas resizes to fit. Great for tweaking API-generated sprites.</td></tr>
+                <tr><td>🎲 Generate Sprite</td><td>Open the sprite generator — pick style, size, color scheme, and complexity to auto-create an animated sprite.</td></tr>
+                <tr><td>🌄 Background</td><td>Open the background generator. See the Background Generator section below.</td></tr>
                 <tr><td>📥 Export</td><td>Save your work as PNG (single frame, all frames, or sprite sheet).</td></tr>
                 <tr><td>❓ Help</td><td>You're here! This guide.</td></tr>
                 <tr><td>🔌 API</td><td>View API documentation for developers and AI agents.</td></tr>
@@ -55,6 +57,60 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><td>🎵 Music</td><td>Toggle procedurally generated ambient music. A volume slider appears when playing.</td></tr>
               </tbody>
             </table>
+          </div>
+
+          {/* Background Generator */}
+          <div className="help-section" id="help-background">
+            <h3>🌄 Background Generator</h3>
+            <p>
+              Click <strong>🌄 Background</strong> in the header to open the background generator.
+              It creates pixel-art parallax backgrounds for game scenes — the preview updates live
+              as you change any option, no generate button needed.
+            </p>
+            <table className="help-table">
+              <thead>
+                <tr><th>Option</th><th>What it does</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Environment</td><td>The biome — Forest, Desert, Cave, Ocean, Ruins, Tundra, Volcanic, Swamp, Plains, or City. Sets colors, elements, and default topography.</td></tr>
+                <tr><td>Time of Day</td><td>Day, Dusk, Night, or Dawn. Shifts the sky gradient and warms or cools all colors.</td></tr>
+                <tr><td>Weather</td><td>Clear, Foggy, Stormy, Snowy, or Rainy. Adds atmospheric overlays and effects.</td></tr>
+                <tr><td>Topography</td><td>Shape of the distant horizon — Flat, Rolling, Mountains, or Jagged. Each biome has a sensible default; click to override. Click the active option again to go back to the biome default.</td></tr>
+                <tr><td>Layers</td><td>How many parallax layers to generate: 2 (sky + foreground), 3 (+ midground), or 4 (+ distant).</td></tr>
+                <tr><td>Pixel Size</td><td>2px = standard chunky pixel art. 4px = very chunky, good for low-res scenes.</td></tr>
+                <tr><td>Density</td><td>How many trees, rocks, buildings, or other elements fill the midground.</td></tr>
+                <tr><td>Tileable</td><td>When on, layers loop seamlessly horizontally — essential for side-scrolling games.</td></tr>
+                <tr><td>Output Width</td><td>160, 320, or 640 pixels wide. Height is always 180px.</td></tr>
+              </tbody>
+            </table>
+            <h4>Individual Layers</h4>
+            <p>
+              After generating, each layer appears as a thumbnail. <strong>Click the image</strong> or
+              the <strong>⬇ PNG</strong> button to download that layer as a PNG file.
+              Click <strong>✏️ Edit</strong> to load the layer directly into the pixel editor — the
+              background modal closes and the layer opens at full size, ready to paint on.
+            </p>
+            <h4>Export</h4>
+            <p>
+              The Export section offers <strong>Composite PNG</strong> (all layers flattened into one
+              image) and <strong>All Layers (ZIP)</strong> which downloads each layer as a separate
+              named PNG — the format most game engines expect for parallax backgrounds.
+              The <strong>🎮 Godot Scene</strong> button shows a ready-to-paste
+              ParallaxBackground scene snippet for Godot 4.
+            </p>
+            <h4>New Canvas for backgrounds</h4>
+            <p>
+              To paint a background from scratch, click <strong>📄 New</strong> and use one of the
+              background presets: <strong>160×90 BG</strong>, <strong>320×180 BG</strong>, or{' '}
+              <strong>640×180 BG</strong>. This opens a blank wide canvas at the right aspect ratio.
+            </p>
+            <div className="help-tip">
+              <strong>Agent tip:</strong> Backgrounds are also available via the API at{' '}
+              <code>POST /generate-background</code>. The response includes base64 PNGs for each layer
+              which can be passed into <code>POST /import</code> then modified with{' '}
+              <code>POST /draw</code> — so an agent can generate and custom-paint a background
+              entirely through the API.
+            </div>
           </div>
 
           {/* Preset Bar */}
@@ -271,9 +327,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
           <div className="help-section" id="help-api">
             <h3>🔌 API &amp; Agent Integration</h3>
             <p>
-              AstroSprite has a full REST API (7 endpoints) that lets AI agents and developers
-              generate, draw, import, export, and manage sprites programmatically. Click the{' '}
-              <strong>🔌 API</strong> button in the header for full documentation and Swagger UI.
+              AstroSprite has a full REST API (8 endpoints) that lets AI agents and developers
+              generate sprites and backgrounds, draw, import, export, and manage sprites programmatically.
+              Click the <strong>🔌 API</strong> button in the header for full documentation and Swagger UI.
             </p>
             <table className="help-table">
               <thead>
@@ -281,6 +337,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
               </thead>
               <tbody>
                 <tr><td><code>POST /generate</code></td><td>Generate sprites from templates, styles, colors</td></tr>
+                <tr><td><code>POST /generate-background</code></td><td>Generate pixel-art parallax background layers</td></tr>
                 <tr><td><code>POST /draw</code></td><td>Pencil, eraser, fill, line, rect, circle + color cycle</td></tr>
                 <tr><td><code>POST /import</code></td><td>Import a base64 PNG as a sprite</td></tr>
                 <tr><td><code>POST /export</code></td><td>Render sprite data to PNG frames & sheet</td></tr>

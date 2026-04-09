@@ -11,11 +11,13 @@ export type EnvironmentType =
 
 export type TimeOfDay = 'day' | 'dusk' | 'night' | 'dawn';
 export type WeatherType = 'clear' | 'foggy' | 'stormy' | 'snowy' | 'rainy';
+export type Topography = 'flat' | 'rolling' | 'mountains' | 'jagged';
 
 export interface BackgroundOptions {
   environment: EnvironmentType;
   timeOfDay: TimeOfDay;
   weather: WeatherType;
+  topography?: Topography;
   layerCount: 2 | 3 | 4;
   pixelSize: 2 | 4;
   density: 'sparse' | 'medium' | 'dense';
@@ -23,6 +25,19 @@ export interface BackgroundOptions {
   outputWidth: 160 | 320 | 640;
   seed?: number;
 }
+
+const DEFAULT_TOPOGRAPHY: Record<EnvironmentType, Topography> = {
+  forest:   'rolling',
+  desert:   'flat',
+  cave:     'flat',
+  ocean:    'flat',
+  ruins:    'rolling',
+  tundra:   'mountains',
+  volcanic: 'jagged',
+  swamp:    'flat',
+  plains:   'flat',
+  city:     'flat',
+};
 
 export interface BackgroundLayer {
   name: string;
@@ -240,6 +255,18 @@ function rollProfile(baseW: number, baseH: number, minFrac: number, maxFrac: num
     profile[x] = Math.round(baseH * lerp(minFrac, maxFrac, t));
   }
   return profile;
+}
+
+/** Nearly flat horizon with subtle undulation */
+function flatProfile(baseW: number, baseH: number, frac: number, tileable: boolean, rng: Rng): number[] {
+  const base = Math.round(baseH * frac);
+  const pi2 = Math.PI * 2;
+  const seed1 = rng() * 10;
+  const freq = tileable ? pi2 * Math.round(2 + rng() * 2) / baseW : pi2 * (2 + rng()) / baseW;
+  return Array.from({ length: baseW }, (_, x) => {
+    const wave = Math.sin(x * freq + seed1) * Math.round(baseH * 0.025);
+    return Math.round(base + wave);
+  });
 }
 
 /** Jagged mountain peaks */
@@ -587,28 +614,36 @@ function generateDistantLayer(
 
   let profile: number[];
 
-  switch (opts.environment) {
-    case 'cave':
-      // stalactites from top
-      profile = rollProfile(baseW, baseH, 0.02, 0.35, opts.tileable, rng);
-      ctx.fillStyle = toStyle(pal.distant);
-      for (let x = 0; x < baseW; x++) {
-        ctx.fillRect(x * ps, 0, ps, profile[x] * ps);
-      }
-      // floor
-      ctx.fillStyle = toStyle(pal.ground);
-      ctx.fillRect(0, Math.floor(baseH * 0.72) * ps, opts.outputWidth, OUTPUT_HEIGHT);
-      return canvas;
+  // Cave and city are special regardless of topography
+  if (opts.environment === 'cave') {
+    profile = rollProfile(baseW, baseH, 0.02, 0.35, opts.tileable, rng);
+    ctx.fillStyle = toStyle(pal.distant);
+    for (let x = 0; x < baseW; x++) {
+      ctx.fillRect(x * ps, 0, ps, profile[x] * ps);
+    }
+    ctx.fillStyle = toStyle(pal.ground);
+    ctx.fillRect(0, Math.floor(baseH * 0.72) * ps, opts.outputWidth, OUTPUT_HEIGHT);
+    return canvas;
+  }
 
-    case 'city':
-      profile = buildingProfile(baseW, baseH, opts.density, rng);
-      break;
-    case 'tundra':
-    case 'volcanic':
-      profile = jaggProfile(baseW, baseH, 0.28, 0.58, opts.tileable, rng);
-      break;
-    default:
-      profile = rollProfile(baseW, baseH, 0.32, 0.62, opts.tileable, rng);
+  if (opts.environment === 'city') {
+    profile = buildingProfile(baseW, baseH, opts.density, rng);
+  } else {
+    const topo = opts.topography ?? DEFAULT_TOPOGRAPHY[opts.environment];
+    switch (topo) {
+      case 'flat':
+        profile = flatProfile(baseW, baseH, 0.52, opts.tileable, rng);
+        break;
+      case 'mountains':
+        profile = rollProfile(baseW, baseH, 0.25, 0.55, opts.tileable, rng);
+        break;
+      case 'jagged':
+        profile = jaggProfile(baseW, baseH, 0.28, 0.58, opts.tileable, rng);
+        break;
+      case 'rolling':
+      default:
+        profile = rollProfile(baseW, baseH, 0.38, 0.60, opts.tileable, rng);
+    }
   }
 
   ctx.fillStyle = toStyle(pal.distant);
