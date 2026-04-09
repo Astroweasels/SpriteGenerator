@@ -615,13 +615,6 @@ function App() {
             🎼 Music
           </button>
           <button className="header-btn help-btn" onClick={() => setShowHelp(true)}>
-                  {showMusicModal && (
-                    <GenerateMusicModal
-                      onClose={() => setShowMusicModal(false)}
-                      onGenerate={handleGenerateMusic}
-                      loading={musicLoading}
-                    />
-                  )}
             ❓ Help
           </button>
           <button className="header-btn api-btn" onClick={() => setShowApiDocs(true)}>
@@ -814,6 +807,14 @@ function App() {
             ← Return to Backgrounds
           </button>
         </div>
+      )}
+
+      {showMusicModal && (
+        <GenerateMusicModal
+          onClose={() => setShowMusicModal(false)}
+          onGenerate={handleGenerateMusic}
+          loading={musicLoading}
+        />
       )}
 
       {showHelp && (
