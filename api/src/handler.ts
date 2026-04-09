@@ -1,3 +1,52 @@
+  // ---- Batch endpoint for agent/automation workflows ----
+  if (method === 'POST' && routePath === '/batch') {
+    let ops: any[] = [];
+    try {
+      ops = JSON.parse(event.body || '[]');
+      if (!Array.isArray(ops)) throw new Error('Body must be an array of operations');
+    } catch (err) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON array', details: String(err) }) };
+    }
+    const results = [];
+    for (const op of ops) {
+      try {
+        if (!op || typeof op !== 'object' || !op.type) throw new Error('Each operation must have a type');
+        let result;
+        switch (op.type) {
+          case 'generate':
+            result = generateRandomSprite(op.params);
+            break;
+          case 'generate-background':
+            result = generateBackgroundAPI(op.params);
+            break;
+          case 'draw':
+            result = await handleDraw(op.params);
+            break;
+          case 'import':
+            result = await handleImport(op.params);
+            break;
+          case 'export':
+            result = await handleExport(op.params);
+            break;
+          case 'layers':
+            result = await handleLayers(op.params);
+            break;
+          case 'frames':
+            result = await handleFrames(op.params);
+            break;
+          case 'resize':
+            result = await handleResize(op.params);
+            break;
+          default:
+            throw new Error(`Unknown operation type: ${op.type}`);
+        }
+        results.push({ ok: true, type: op.type, result });
+      } catch (err) {
+        results.push({ ok: false, type: op?.type, error: String(err) });
+      }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ results }) };
+  }
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';

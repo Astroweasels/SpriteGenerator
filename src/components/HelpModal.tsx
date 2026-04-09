@@ -344,12 +344,15 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><td><code>POST /layers</code></td><td>Add, delete, duplicate, merge, reorder layers</td></tr>
                 <tr><td><code>POST /frames</code></td><td>Add, delete, duplicate animation frames</td></tr>
                 <tr><td><code>POST /resize</code></td><td>Resize the canvas</td></tr>
+                <tr><td><code>POST /batch</code></td><td>Batch multiple API operations in one call (for agents/automation)</td></tr>
               </tbody>
             </table>
             <div className="help-tip">
               <strong>For AI agents:</strong> Every editing endpoint returns a <code>sprite</code>{' '}
               object that can be passed into the next call. Agents can generate → inspect → re-draw
-              or re-import → export, all without server-side state.
+              or re-import → export, all without server-side state.<br/>
+              <br/>
+              <strong>Batch endpoint:</strong> Use <code>POST /batch</code> to run multiple operations (generate, draw, export, etc.) in a single call. Each operation must have a <code>type</code> and <code>params</code> field. The response is an array of results (success or error for each operation).
             </div>
           </div>
         </div>

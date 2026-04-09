@@ -1,3 +1,62 @@
+  /batch:
+    post:
+      operationId: batchOperations
+      summary: Batch multiple API operations in a single call
+      description: |
+        Accepts an array of operations (generate, draw, export, etc.) and returns an array of results.
+        Each operation must have a `type` field (e.g., `generate`, `draw`, `export`) and a `params` object.
+        This endpoint is designed for AI agents and automation workflows to efficiently chain multiple actions.
+        Example request:
+        ```json
+        [
+          { "type": "generate", "params": { "style": "humanoid", "size": 32 } },
+          { "type": "draw", "params": { ... } },
+          { "type": "export", "params": { ... } }
+        ]
+        ```
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [type, params]
+                properties:
+                  type:
+                    type: string
+                    description: The operation type (e.g., generate, draw, export)
+                  params:
+                    type: object
+                    description: Parameters for the operation
+      responses:
+        '200':
+          description: Array of results (one per operation)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ok:
+                          type: boolean
+                        type:
+                          type: string
+                        result:
+                          description: Result object if successful
+                        error:
+                          description: Error message if failed
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 openapi: 3.1.0
 info:
   title: AstroSprite API

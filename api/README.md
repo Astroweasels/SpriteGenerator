@@ -1,3 +1,35 @@
+## Batch Operations for Agents
+
+The `/batch` endpoint allows agents to perform multiple API operations in a single call. This is ideal for automation workflows that need to generate, edit, and export assets efficiently.
+
+**Endpoint:** `POST /batch`
+
+**Request Body:** An array of operations, each with a `type` and `params` field. Example:
+
+```json
+[
+  { "type": "generate", "params": { "style": "humanoid", "size": 32 } },
+  { "type": "draw", "params": { ... } },
+  { "type": "export", "params": { ... } }
+]
+```
+
+**Response:**
+
+```json
+{
+  "results": [
+    { "ok": true, "type": "generate", "result": { ... } },
+    { "ok": false, "type": "draw", "error": "Invalid params" },
+    ...
+  ]
+}
+```
+
+Each result includes `ok` (boolean), `type` (operation type), and either `result` (on success) or `error` (on failure).
+
+Supported operation types: `generate`, `generate-background`, `draw`, `import`, `export`, `layers`, `frames`, `resize`.
+
 # AstroSprite API
 
 Headless sprite generation service for AI agents and automated pipelines. Generates pixel art characters with weapons, per-region color control, and named animation sequences via a single REST endpoint.
