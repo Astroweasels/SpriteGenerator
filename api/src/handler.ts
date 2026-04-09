@@ -14,6 +14,8 @@ import { renderFrameToPNG, renderSheetToPNG } from './render.js';
 import { generateBackgroundAPI } from './generateBackground.js';
 import { TEMPLATE_NAMES } from './templates.js';
 import { handleDraw, handleImport, handleExport, handleLayers, handleFrames, handleResize } from './editHandler.js';
+import { generateProceduralMusic } from './generateMusic.js';
+import { generateProceduralSfx } from './generateSfx.js';
 
 // ---- Constants & validation ----
 
@@ -305,6 +307,12 @@ export async function handler(event: any): Promise<any> {
           case 'generate-background':
             result = generateBackgroundAPI(op.params);
             break;
+          case 'generate-music':
+            result = await generateProceduralMusic(op.params);
+            break;
+          case 'generate-sfx':
+            result = await generateProceduralSfx(op.params);
+            break;
           case 'draw':
             result = await handleDraw(op.params);
             break;
@@ -326,6 +334,19 @@ export async function handler(event: any): Promise<any> {
           default:
             throw new Error(`Unknown operation type: ${op.type}`);
         }
+          // Procedural music generation endpoint
+          if (method === 'POST' && routePath === '/generate-music') {
+            const req = JSON.parse(event.body || '{}');
+            const result = await generateProceduralMusic(req);
+            return { statusCode: 200, headers, body: JSON.stringify(result) };
+          }
+
+          // Procedural sound effect generation endpoint
+          if (method === 'POST' && routePath === '/generate-sfx') {
+            const req = JSON.parse(event.body || '{}');
+            const result = await generateProceduralSfx(req);
+            return { statusCode: 200, headers, body: JSON.stringify(result) };
+          }
         results.push({ ok: true, type: op.type, result });
       } catch (err) {
         results.push({ ok: false, type: op?.type, error: String(err) });

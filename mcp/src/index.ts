@@ -223,6 +223,53 @@ server.tool(
   }
 );
 
+
+// ---- Tool: generate_music ----
+server.tool(
+  'generate_music',
+  'Procedurally generate a seamless music loop (WAV/OGG) in a specified style and mood.',
+  {
+    style: z.enum(['chiptune', 'orchestral', 'synthwave', 'lo-fi', 'jazz', 'rock', 'ambient', 'random'])
+      .describe('Musical style or genre'),
+    mood: z.enum(['upbeat', 'mysterious', 'dark', 'relaxing', 'energetic', 'sad', 'random'])
+      .describe('Mood or emotional tone'),
+    lengthSeconds: z.number().min(2).max(60)
+      .describe('Length of the loop in seconds'),
+    tempo: z.number().int().min(60).max(200).optional()
+      .describe('Tempo in beats per minute (optional)'),
+    seed: z.number().int().optional()
+      .describe('Optional seed for reproducibility'),
+  },
+  async (params) => {
+    const result = await callApi('/generate-music', params);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
+// ---- Tool: generate_sfx ----
+server.tool(
+  'generate_sfx',
+  'Procedurally generate a sound effect (WAV/OGG) in a specified category and style.',
+  {
+    category: z.enum(['jump', 'hit', 'pickup', 'ui', 'explosion', 'powerup', 'shoot', 'random'])
+      .describe('SFX category or use case'),
+    style: z.enum(['retro', 'modern', 'organic', 'glitch', 'random'])
+      .describe('SFX style or synthesis type'),
+    lengthSeconds: z.number().min(0.1).max(10)
+      .describe('Length of the SFX in seconds'),
+    seed: z.number().int().optional()
+      .describe('Optional seed for reproducibility'),
+  },
+  async (params) => {
+    const result = await callApi('/generate-sfx', params);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    };
+  }
+);
+
 // ---- Start ----
 
 const transport = new StdioServerTransport();

@@ -52,6 +52,8 @@ The API runs at `https://astrosprite.com`. Open `https://astrosprite.com/docs` f
 | POST | `/generate` | Generate a sprite |
 | GET | `/docs` | Swagger UI (local only) |
 | GET | `/openapi.yaml` | Raw OpenAPI 3.1 spec |
+| POST | `/generate-music` | Generate a procedural music loop |
+| POST | `/generate-sfx` | Generate a procedural sound effect |
 
 ---
 
@@ -137,7 +139,6 @@ Override individual body regions to match a character description. Each palette 
 
 ## Example Requests
 
-### Purple-robed mage with staff
 
 ```bash
 curl -X POST https://astrosprite.com/generate \
@@ -178,7 +179,6 @@ curl -X POST https://astrosprite.com/generate \
 ```bash
 curl -X POST https://astrosprite.com/generate \
   -H "Content-Type: application/json" \
-  -d '{"style":"creature","size":32,"colorScheme":"neon","complexity":"complex"}'
 ```
 
 ---
@@ -216,7 +216,6 @@ curl -X POST https://astrosprite.com/generate \
     },
     "meta": { "app": "AstroSprite", "version": "1.0", "image": "sprite_sheet.png", "format": "RGBA8888", "size": {"w":512,"h":64}, "scale": 2 }
   },
-  "engineFormats": {
     "phaserAtlas": "{ \"textures\": [{ \"image\": \"sprite_sheet.png\", ... }] }",
     "godotTres": "[gd_resource type=\"SpriteFrames\" ...] ...",
     "cssSpriteSheet": ".sprite-sprite { background-image: url('sprite_sheet.png'); ... }"

@@ -338,6 +338,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
               <tbody>
                 <tr><td><code>POST /generate</code></td><td>Generate sprites from templates, styles, colors</td></tr>
                 <tr><td><code>POST /generate-background</code></td><td>Generate pixel-art parallax background layers</td></tr>
+                <tr><td><code>POST /generate-music</code></td><td>Procedurally generate a seamless music loop (WAV/OGG, style & mood)</td></tr>
+                <tr><td><code>POST /generate-sfx</code></td><td>Procedurally generate a sound effect (WAV/OGG, category & style)</td></tr>
                 <tr><td><code>POST /draw</code></td><td>Pencil, eraser, fill, line, rect, circle + color cycle</td></tr>
                 <tr><td><code>POST /import</code></td><td>Import a base64 PNG as a sprite</td></tr>
                 <tr><td><code>POST /export</code></td><td>Render sprite data to PNG frames & sheet</td></tr>
@@ -347,6 +349,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <tr><td><code>POST /batch</code></td><td>Batch multiple API operations in one call (for agents/automation)</td></tr>
               </tbody>
             </table>
+            <div className="help-tip">
+              <strong>New:</strong> <code>POST /generate-music</code> and <code>POST /generate-sfx</code> let you create procedural music loops and sound effects for your games or creative projects. Specify style, mood, or category, and get a base64 WAV/OGG file ready to use!
+            </div>
             <div className="help-tip">
               <strong>For AI agents:</strong> Every editing endpoint returns a <code>sprite</code>{' '}
               object that can be passed into the next call. Agents can generate → inspect → re-draw

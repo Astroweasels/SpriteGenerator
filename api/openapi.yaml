@@ -234,6 +234,97 @@ servers:
     description: Production
 
 paths:
+  /generate-music:
+    post:
+      operationId: generateProceduralMusic
+      summary: Procedurally generate a short music loop (WAV/OGG)
+      description: |
+        Generates a short, seamless music loop in a specified style and mood. Returns a base64-encoded WAV or OGG file and metadata. Designed for use as background music in games or creative projects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateMusicRequest'
+            examples:
+              chiptune:
+                summary: Chiptune loop, upbeat
+                value:
+                  style: chiptune
+                  mood: upbeat
+                  lengthSeconds: 12
+                  tempo: 120
+              orchestral:
+                summary: Orchestral, mysterious
+                value:
+                  style: orchestral
+                  mood: mysterious
+                  lengthSeconds: 20
+                  tempo: 90
+      responses:
+        '200':
+          description: Music generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateMusicResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /generate-sfx:
+    post:
+      operationId: generateProceduralSfx
+      summary: Procedurally generate a sound effect (WAV/OGG)
+      description: |
+        Generates a short sound effect in a specified category and style. Returns a base64-encoded WAV or OGG file and metadata. Designed for use as game SFX (jump, hit, pickup, UI, etc).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateSfxRequest'
+            examples:
+              jump:
+                summary: Jump SFX, retro
+                value:
+                  category: jump
+                  style: retro
+                  lengthSeconds: 1
+              ui:
+                summary: UI blip, modern
+                value:
+                  category: ui
+                  style: modern
+                  lengthSeconds: 0.5
+      responses:
+        '200':
+          description: SFX generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateSfxResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /generate:
     post:
       operationId: generateSprite
@@ -833,6 +924,104 @@ paths:
 
 components:
   schemas:
+    GenerateMusicRequest:
+      type: object
+      required: [style, mood, lengthSeconds]
+      properties:
+        style:
+          type: string
+          enum: [chiptune, orchestral, synthwave, lo-fi, jazz, rock, ambient, random]
+          description: Musical style or genre.
+        mood:
+          type: string
+          enum: [upbeat, mysterious, dark, relaxing, energetic, sad, random]
+          description: Mood or emotional tone.
+        lengthSeconds:
+          type: number
+          minimum: 2
+          maximum: 60
+          description: Length of the loop in seconds.
+        tempo:
+          type: integer
+          minimum: 60
+          maximum: 200
+          description: Tempo in beats per minute (optional).
+        seed:
+          type: integer
+          description: Optional seed for reproducibility.
+
+    GenerateMusicResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        audio:
+          type: string
+          description: Base64-encoded WAV or OGG file (data:audio/wav;base64,...).
+        format:
+          type: string
+          enum: [wav, ogg]
+          description: Audio format.
+        style:
+          type: string
+        mood:
+          type: string
+        lengthSeconds:
+          type: number
+        tempo:
+          type: integer
+        seed:
+          type: integer
+        metadata:
+          type: object
+          description: Additional generation metadata.
+
+    GenerateSfxRequest:
+      type: object
+      required: [category, style, lengthSeconds]
+      properties:
+        category:
+          type: string
+          enum: [jump, hit, pickup, ui, explosion, powerup, shoot, random]
+          description: SFX category or use case.
+        style:
+          type: string
+          enum: [retro, modern, organic, glitch, random]
+          description: SFX style or synthesis type.
+        lengthSeconds:
+          type: number
+          minimum: 0.1
+          maximum: 10
+          description: Length of the SFX in seconds.
+        seed:
+          type: integer
+          description: Optional seed for reproducibility.
+
+    GenerateSfxResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        audio:
+          type: string
+          description: Base64-encoded WAV or OGG file (data:audio/wav;base64,...).
+        format:
+          type: string
+          enum: [wav, ogg]
+          description: Audio format.
+        category:
+          type: string
+        style:
+          type: string
+        lengthSeconds:
+          type: number
+        seed:
+          type: integer
+        metadata:
+          type: object
+          description: Additional generation metadata.
     ColorRGB:
       type: object
       required: [r, g, b]
