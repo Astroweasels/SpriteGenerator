@@ -1,8 +1,8 @@
-.generate-music-modal {
+.generate-sfx-modal {
   background: #181f2a;
   border: 1px solid #333355;
   border-radius: 12px;
-  width: 400px;
+  width: 380px;
   max-width: 95vw;
   max-height: 90vh;
   overflow-y: auto;
@@ -10,7 +10,7 @@
   padding: 0;
 }
 
-.generate-music-modal .modal-header {
+.generate-sfx-modal .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -18,13 +18,13 @@
   border-bottom: 1px solid #222244;
 }
 
-.generate-music-modal .modal-header h2 {
+.generate-sfx-modal .modal-header h2 {
   font-size: 1.3em;
   color: #e0e0ff;
   margin: 0;
 }
 
-.generate-music-modal .modal-close {
+.generate-sfx-modal .modal-close {
   background: none;
   border: none;
   color: #aaaaff;
@@ -32,26 +32,26 @@
   cursor: pointer;
 }
 
-.generate-music-modal .modal-body {
+.generate-sfx-modal .modal-body {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.generate-music-modal .form-group {
+.generate-sfx-modal .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.generate-music-modal label {
+.generate-sfx-modal label {
   color: #b0b0ff;
   font-size: 0.98em;
 }
 
-.generate-music-modal select,
-.generate-music-modal input[type="number"] {
+.generate-sfx-modal select,
+.generate-sfx-modal input[type="number"] {
   padding: 7px 10px;
   border: 1px solid #333355;
   border-radius: 6px;
@@ -60,14 +60,14 @@
   font-size: 1em;
 }
 
-.generate-music-modal .modal-footer {
+.generate-sfx-modal .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 18px;
 }
 
-.generate-music-modal .btn-primary {
+.generate-sfx-modal .btn-primary {
   background: #3355ff;
   color: #fff;
   border: none;
@@ -77,13 +77,13 @@
   cursor: pointer;
 }
 
-.generate-music-modal .btn-primary:disabled {
+.generate-sfx-modal .btn-primary:disabled {
   background: #222244;
   color: #8888aa;
   cursor: not-allowed;
 }
 
-.generate-music-modal .btn-secondary {
+.generate-sfx-modal .btn-secondary {
   background: #232b3a;
   color: #b0b0ff;
   border: 1px solid #333355;
@@ -93,16 +93,7 @@
   cursor: pointer;
 }
 
-.generate-music-modal .form-row {
-  display: flex;
-  gap: 16px;
-}
-
-.generate-music-modal .form-row .form-group {
-  flex: 1;
-}
-
-.music-preview {
+.sfx-preview {
   background: #0e1520;
   border: 1px solid #333355;
   border-radius: 8px;
@@ -111,12 +102,12 @@
   justify-content: center;
 }
 
-.music-preview audio {
+.sfx-preview audio {
   width: 100%;
   accent-color: #3355ff;
 }
 
-.music-error {
+.sfx-error {
   color: #ff6666;
   font-size: 0.9em;
   background: #2a1a1a;

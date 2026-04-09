@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { GenerateMusicModal, type GenerateMusicParams } from './components/GenerateMusicModal';
+import { GenerateSfxModal, type GenerateSfxParams } from './components/GenerateSfxModal';
 import type { BackgroundResult } from './utils/generateBackground';
 import type { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
 import {
@@ -61,10 +62,15 @@ function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showMusicModal, setShowMusicModal] = useState(false);
-  const [musicLoading, setMusicLoading] = useState(false);
-  // Store last generated music for asset pack export
+  const [showSfxModal, setShowSfxModal] = useState(false);
   const [lastMusic, setLastMusic] = useState<{
     params: GenerateMusicParams;
+    audioUrl: string;
+    format: string;
+    base64?: string;
+  } | null>(null);
+  const [lastSfx, setLastSfx] = useState<{
+    params: GenerateSfxParams;
     audioUrl: string;
     format: string;
     base64?: string;
@@ -542,43 +548,14 @@ function App() {
     e.target.value = '';
   };
 
-  // ---- Music Generation ----
   const API_BASE = import.meta.env.VITE_API_BASE || 'https://api.astrosprite.com';
 
-  const handleGenerateMusic = async (params: GenerateMusicParams) => {
-    setMusicLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/generate-music`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      if (!res.ok) throw new Error('Failed to generate music');
-      const data = await res.json();
-      if (data && data.audio && data.format) {
-        // Download as before
-        const link = document.createElement('a');
-        link.href = data.audio;
-        link.download = `music_${params.style}_${params.mood}.${data.format}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // Store for asset pack export
-        setLastMusic({
-          params,
-          audioUrl: data.audio,
-          format: data.format,
-          base64: data.audio.startsWith('data:') ? data.audio : undefined,
-        });
-      } else {
-        alert('Music generation failed.');
-      }
-    } catch (e) {
-      alert('Music generation failed.');
-    } finally {
-      setMusicLoading(false);
-      setShowMusicModal(false);
-    }
+  const handleMusicDownload = (audioUrl: string, format: string, params: GenerateMusicParams) => {
+    setLastMusic({ params, audioUrl, format, base64: audioUrl.startsWith('data:') ? audioUrl : undefined });
+  };
+
+  const handleSfxDownload = (audioUrl: string, format: string, params: GenerateSfxParams) => {
+    setLastSfx({ params, audioUrl, format, base64: audioUrl.startsWith('data:') ? audioUrl : undefined });
   };
 
   return (
@@ -613,6 +590,9 @@ function App() {
           </button>
           <button className="header-btn" onClick={() => setShowMusicModal(true)}>
             🎼 Music
+          </button>
+          <button className="header-btn" onClick={() => setShowSfxModal(true)}>
+            🔊 SFX
           </button>
           <button className="header-btn help-btn" onClick={() => setShowHelp(true)}>
             ❓ Help
@@ -812,8 +792,16 @@ function App() {
       {showMusicModal && (
         <GenerateMusicModal
           onClose={() => setShowMusicModal(false)}
-          onGenerate={handleGenerateMusic}
-          loading={musicLoading}
+          onDownload={handleMusicDownload}
+          apiBase={API_BASE}
+        />
+      )}
+
+      {showSfxModal && (
+        <GenerateSfxModal
+          onClose={() => setShowSfxModal(false)}
+          onDownload={handleSfxDownload}
+          apiBase={API_BASE}
         />
       )}
 

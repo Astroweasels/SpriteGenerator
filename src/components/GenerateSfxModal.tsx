@@ -1,33 +1,31 @@
 import React, { useState } from 'react';
-import './GenerateMusicModal.css';
+import './GenerateSfxModal.css';
 
-export type GenerateMusicParams = {
+export type GenerateSfxParams = {
+  category: string;
   style: string;
-  mood: string;
   lengthSeconds: number;
-  tempo?: number;
 };
 
-interface GenerateMusicModalProps {
+interface GenerateSfxModalProps {
   onClose: () => void;
-  onDownload: (audioUrl: string, format: string, params: GenerateMusicParams) => void;
+  onDownload: (audioUrl: string, format: string, params: GenerateSfxParams) => void;
   apiBase: string;
 }
 
-const STYLES = ['chiptune', 'orchestral', 'synthwave', 'lo-fi', 'jazz', 'rock', 'ambient', 'random'];
-const MOODS = ['upbeat', 'mysterious', 'dark', 'relaxing', 'energetic', 'sad', 'random'];
+const CATEGORIES = ['jump', 'hit', 'pickup', 'ui', 'explosion', 'powerup', 'shoot', 'random'];
+const STYLES = ['retro', 'modern', 'organic', 'glitch', 'random'];
 
-export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose, onDownload, apiBase }) => {
-  const [style, setStyle] = useState('chiptune');
-  const [mood, setMood] = useState('upbeat');
-  const [lengthSeconds, setLengthSeconds] = useState(12);
-  const [tempo, setTempo] = useState(120);
+export const GenerateSfxModal: React.FC<GenerateSfxModalProps> = ({ onClose, onDownload, apiBase }) => {
+  const [category, setCategory] = useState('jump');
+  const [style, setStyle] = useState('retro');
+  const [lengthSeconds, setLengthSeconds] = useState(0.5);
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [format, setFormat] = useState('wav');
   const [error, setError] = useState<string | null>(null);
 
-  const params: GenerateMusicParams = { style, mood, lengthSeconds, tempo };
+  const params: GenerateSfxParams = { category, style, lengthSeconds };
 
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,7 +33,7 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
     setAudioUrl(null);
     setError(null);
     try {
-      const res = await fetch(`${apiBase}/generate-music`, {
+      const res = await fetch(`${apiBase}/generate-sfx`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
@@ -59,7 +57,7 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
     if (!audioUrl) return;
     const link = document.createElement('a');
     link.href = audioUrl;
-    link.download = `music_${style}_${mood}.${format}`;
+    link.download = `sfx_${category}_${style}.${format}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -68,12 +66,18 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="generate-music-modal" onClick={e => e.stopPropagation()}>
+      <div className="generate-sfx-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🎼 Generate Music</h2>
+          <h2>🔊 Generate SFX</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <form className="modal-body" onSubmit={handleGenerate}>
+          <div className="form-group">
+            <label>Category</label>
+            <select value={category} onChange={e => setCategory(e.target.value)}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
           <div className="form-group">
             <label>Style</label>
             <select value={style} onChange={e => setStyle(e.target.value)}>
@@ -81,26 +85,21 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
             </select>
           </div>
           <div className="form-group">
-            <label>Mood</label>
-            <select value={mood} onChange={e => setMood(e.target.value)}>
-              {MOODS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Length (seconds)</label>
-              <input type="number" min={2} max={60} value={lengthSeconds} onChange={e => setLengthSeconds(Number(e.target.value))} />
-            </div>
-            <div className="form-group">
-              <label>Tempo (BPM)</label>
-              <input type="number" min={60} max={200} value={tempo} onChange={e => setTempo(Number(e.target.value))} />
-            </div>
+            <label>Length (seconds)</label>
+            <input
+              type="number"
+              min={0.1}
+              max={10}
+              step={0.1}
+              value={lengthSeconds}
+              onChange={e => setLengthSeconds(Number(e.target.value))}
+            />
           </div>
 
-          {error && <div className="music-error">{error}</div>}
+          {error && <div className="sfx-error">{error}</div>}
 
           {audioUrl && (
-            <div className="music-preview">
+            <div className="sfx-preview">
               <audio controls src={audioUrl} />
             </div>
           )}
