@@ -81,7 +81,7 @@ export async function generateProceduralSfx(req: SfxRequest): Promise<SfxRespons
       break;
     case 'hit':
       // Short noise burst, then a low thud
-      sweep(samples, 0, Math.floor(totalSamples * 0.3), 300, 80, amp, 'noise', rng);
+      sweep(samples, 0, 300, 80, amp, 'noise', rng);
       sweep(samples, Math.floor(totalSamples * 0.1), 80, 40, amp * 0.6, waveform, rng);
       break;
     case 'pickup':
@@ -97,22 +97,22 @@ export async function generateProceduralSfx(req: SfxRequest): Promise<SfxRespons
       break;
     case 'explosion':
       // Heavy descending noise
-      sweep(samples, 0, totalSamples, 60, 20, amp, 'noise', rng);
+      sweep(samples, 0, 60, 20, amp, 'noise', rng);
       sweep(samples, 0, 120, 40, amp * 0.5, waveform, rng);
       break;
     case 'powerup':
       // Rapid ascending sweep
-      sweep(samples, 0, totalSamples, 200, 1200, amp, waveform, rng);
+      sweep(samples, 0, 200, 1200, amp, waveform, rng);
       break;
     case 'shoot':
       // Sharp high-pitched decay
-      sweep(samples, 0, totalSamples, 1200, 300, amp, waveform, rng);
+      sweep(samples, 0, 1200, 300, amp, waveform, rng);
       break;
     default: {
       // Random: pick a random sweep
       const startFreq = 100 + rng() * 400;
       const endFreq = 100 + rng() * 1000;
-      sweep(samples, 0, totalSamples, startFreq, endFreq, amp, waveform, rng);
+      sweep(samples, 0, startFreq, endFreq, amp, waveform, rng);
     }
   }
 
