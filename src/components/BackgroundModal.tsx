@@ -73,7 +73,7 @@ function downloadZip(result: BackgroundResult, env: string): void {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose, onEditInCanvas }) => {
+export const BackgroundModal: React.FC<BackgroundModalProps> = ({ onClose, onEditBackgroundLayer }) => {
   const [opts, setOpts] = useState<BackgroundOptions>({
     environment: 'forest',
     timeOfDay: 'day',
