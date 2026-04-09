@@ -1,3 +1,28 @@
+// ---- Lambda handler ----
+
+export async function handler(
+  event: APIGatewayProxyEventV2
+): Promise<APIGatewayProxyResultV2> {
+  // CORS headers
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+  };
+
+  // Handle preflight
+  if (event.requestContext?.http?.method === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' };
+  }
+
+  const rawPath = event.rawPath || event.requestContext?.http?.path || '/generate';
+  const stage = event.requestContext?.stage || '';
+  const routePath = stage && stage !== '$default' && rawPath.startsWith(`/${stage}`)
+    ? rawPath.slice(stage.length + 1) || '/'
+    : rawPath;
+  const method = event.requestContext?.http?.method || 'POST';
+
   // ---- Batch endpoint for agent/automation workflows ----
   if (method === 'POST' && routePath === '/batch') {
     let ops: any[] = [];
