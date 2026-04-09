@@ -138,6 +138,18 @@ Resources:
             ApiId: !Ref SpriteForgeApi
             Path: /generate-background
             Method: POST
+        GenerateMusic:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /generate-music
+            Method: POST
+        GenerateSfx:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SpriteForgeApi
+            Path: /generate-sfx
+            Method: POST
 
   # --- Usage Plan (for API key throttling via REST API, optional) ---
   # Note: HttpApi (API Gateway v2) does not natively support API keys.

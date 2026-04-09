@@ -1,73 +1,69 @@
-# React + TypeScript + Vite
+# SpriteForge
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A pixel art sprite editor and procedural generator with a REST API. Create and animate game-ready sprites, parallax backgrounds, music loops, and sound effects — in the browser or via API.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Pixel editor** — pencil, eraser, fill, line, rect, circle tools with layer and frame support
+- **Procedural generator** — humanoid, creature, mech, abstract, and object sprites with templates, color overrides, and animation sequences
+- **Background generator** — parallax pixel-art backgrounds (forest, desert, cave, city, and more) with time-of-day and weather
+- **Music generator** — procedural chiptune/ambient/orchestral loops as downloadable WAV files
+- **SFX generator** — procedural sound effects (jump, hit, pickup, etc.)
+- **Export** — sprite sheets with Phaser atlas JSON, Godot `.tres`, and CSS sprite sheet formats
+- **REST API** — all generation and editing exposed as a JSON API, designed for AI agent workflows
 
-## React Compiler
+## Project Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+sprite-forge/
+├── src/               # React frontend (Vite + TypeScript)
+├── api/
+│   ├── src/           # Lambda handler and generators (TypeScript)
+│   └── template.yaml  # AWS SAM template (API Gateway + Lambda)
+└── .github/workflows/ # CI/CD — deploys frontend to S3/CloudFront, API via SAM
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Local Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Frontend
+npm install
+npm run dev          # Vite dev server at http://localhost:5173
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# API (local)
+cd api
+npm install
+npm run build
+npx ts-node src/local.ts   # Local express server at http://localhost:3001
 ```
+
+Set `VITE_API_BASE=http://localhost:3001` in a `.env.local` file to point the frontend at your local API.
+
+## API
+
+Base URL: `https://api.astrosprite.com`
+
+| Endpoint | Description |
+|---|---|
+| `POST /generate` | Generate a sprite |
+| `POST /generate-background` | Generate parallax background layers |
+| `POST /generate-music` | Generate a procedural music loop (WAV) |
+| `POST /generate-sfx` | Generate a sound effect (WAV) |
+| `POST /draw` | Apply drawing operations to a sprite |
+| `POST /import` | Import a PNG as a sprite |
+| `POST /export` | Render sprite data to PNGs |
+| `POST /layers` | Add/delete/merge/reorder layers |
+| `POST /frames` | Add/delete/duplicate animation frames |
+| `POST /resize` | Resize the canvas |
+| `POST /batch` | Run multiple operations in one request |
+| `GET /openapi.yaml` | OpenAPI spec |
+
+Full documentation: [api.astrosprite.com/docs](https://api.astrosprite.com/docs)
+
+## Deployment
+
+Push to `master` to trigger the GitHub Actions workflow, which:
+1. Builds the frontend and syncs it to S3, then invalidates CloudFront
+2. Builds the API and deploys it via `sam deploy`
+
+Required GitHub secrets: `VITE_API_BASE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET`, `CLOUDFRONT_DISTRIBUTION_ID`.
