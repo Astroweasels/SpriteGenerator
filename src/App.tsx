@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { GenerateMusicModal, GenerateMusicParams } from './components/GenerateMusicModal';
 import type { BackgroundResult } from './utils/generateBackground';
 import type { Color, Tool, SpriteSheet, SpriteFrame, RandomGenOptions } from './types';
 import {
@@ -59,6 +60,8 @@ function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showMusicModal, setShowMusicModal] = useState(false);
+  const [musicLoading, setMusicLoading] = useState(false);
   const [newWidth, setNewWidth] = useState(32);
   const [newHeight, setNewHeight] = useState(32);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
@@ -532,6 +535,35 @@ function App() {
     e.target.value = '';
   };
 
+  // ---- Music Generation ----
+  const handleGenerateMusic = async (params: GenerateMusicParams) => {
+    setMusicLoading(true);
+    try {
+      const res = await fetch('/api/generate-music', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) throw new Error('Failed to generate music');
+      const data = await res.json();
+      if (data && data.audio && data.format) {
+        const link = document.createElement('a');
+        link.href = data.audio;
+        link.download = `music_${params.style}_${params.mood}.${data.format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert('Music generation failed.');
+      }
+    } catch (e) {
+      alert('Music generation failed.');
+    } finally {
+      setMusicLoading(false);
+      setShowMusicModal(false);
+    }
+  };
+
   return (
     <div className="app">
       <input
@@ -562,7 +594,17 @@ function App() {
           <button className="header-btn" onClick={() => setShowBackgroundModal(true)} style={{ background: 'linear-gradient(135deg, #1a3a22, #2a5a35)' }}>
             🌄 Background
           </button>
+          <button className="header-btn" onClick={() => setShowMusicModal(true)}>
+            🎼 Music
+          </button>
           <button className="header-btn help-btn" onClick={() => setShowHelp(true)}>
+                  {showMusicModal && (
+                    <GenerateMusicModal
+                      onClose={() => setShowMusicModal(false)}
+                      onGenerate={handleGenerateMusic}
+                      loading={musicLoading}
+                    />
+                  )}
             ❓ Help
           </button>
           <button className="header-btn api-btn" onClick={() => setShowApiDocs(true)}>

@@ -1,0 +1,94 @@
+.generate-music-modal {
+  background: #181f2a;
+  border: 1px solid #333355;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  padding: 0;
+}
+
+.generate-music-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 8px 24px;
+  border-bottom: 1px solid #222244;
+}
+
+.generate-music-modal .modal-header h2 {
+  font-size: 1.3em;
+  color: #e0e0ff;
+  margin: 0;
+}
+
+.generate-music-modal .modal-close {
+  background: none;
+  border: none;
+  color: #aaaaff;
+  font-size: 1.2em;
+  cursor: pointer;
+}
+
+.generate-music-modal .modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.generate-music-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.generate-music-modal label {
+  color: #b0b0ff;
+  font-size: 0.98em;
+}
+
+.generate-music-modal select,
+.generate-music-modal input[type="number"] {
+  padding: 7px 10px;
+  border: 1px solid #333355;
+  border-radius: 6px;
+  background: #232b3a;
+  color: #e0e0ff;
+  font-size: 1em;
+}
+
+.generate-music-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.generate-music-modal .btn-primary {
+  background: #3355ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.generate-music-modal .btn-primary:disabled {
+  background: #222244;
+  color: #8888aa;
+  cursor: not-allowed;
+}
+
+.generate-music-modal .btn-secondary {
+  background: #232b3a;
+  color: #b0b0ff;
+  border: 1px solid #333355;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 1em;
+  cursor: pointer;
+}

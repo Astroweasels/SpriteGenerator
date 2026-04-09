@@ -358,30 +358,87 @@ export async function handler(event: any): Promise<any> {
   try {
     // ...existing handler logic (health, docs, openapi, generate, etc)...
 
-  // Serve OpenAPI spec
-  if (method === 'GET' && routePath === '/openapi.yaml') {
-    try {
-      const specPath = path.join(__dirname, 'openapi.yaml');
-      const spec = fs.readFileSync(specPath, 'utf-8');
-      return {
-        statusCode: 200,
-        headers: { ...headers, 'Content-Type': 'text/yaml; charset=utf-8' },
-        body: spec,
-      };
-    } catch {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: 'openapi.yaml not found' }),
-      };
+    // Serve OpenAPI spec
+    if (method === 'GET' && routePath === '/openapi.yaml') {
+      try {
+        const specPath = path.join(__dirname, 'openapi.yaml');
+        const spec = fs.readFileSync(specPath, 'utf-8');
+        return {
+          statusCode: 200,
+          headers: { ...headers, 'Content-Type': 'text/yaml; charset=utf-8' },
+          body: spec,
+        };
+      } catch {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'openapi.yaml not found' }),
+        };
+      }
     }
-  }
+
     // Parse body
     let body: unknown;
     try {
       body = JSON.parse(event.body || '{}');
     } catch {
       throw new Error('Invalid JSON in request body');
+    }
+
+    // Music endpoint
+    if (routePath === '/generate-music') {
+      const b = body as Record<string, unknown>;
+      // Minimal validation per OpenAPI
+      const validStyles = ['chiptune','orchestral','synthwave','lo-fi','jazz','rock','ambient','random'];
+      const validMoods = ['upbeat','mysterious','dark','relaxing','energetic','sad','random'];
+      const style = b.style;
+      const mood = b.mood;
+      const lengthSeconds = Number(b.lengthSeconds);
+      if (!style || typeof style !== 'string' || !validStyles.includes(style)) {
+        throw new Error(`"style" must be one of: ${validStyles.join(', ')}`);
+      }
+      if (!mood || typeof mood !== 'string' || !validMoods.includes(mood)) {
+        throw new Error(`"mood" must be one of: ${validMoods.join(', ')}`);
+      }
+      if (!Number.isFinite(lengthSeconds) || lengthSeconds < 2 || lengthSeconds > 60) {
+        throw new Error('"lengthSeconds" must be a number between 2 and 60');
+      }
+      // Optionally validate tempo and seed
+      if (b.tempo !== undefined) {
+        const tempo = Number(b.tempo);
+        if (!Number.isInteger(tempo) || tempo < 60 || tempo > 200) {
+          throw new Error('"tempo" must be an integer between 60 and 200');
+        }
+      }
+      if (b.seed !== undefined && !Number.isInteger(Number(b.seed))) {
+        throw new Error('"seed" must be an integer');
+      }
+      const result = await generateProceduralMusic(b as any); // validated above
+      return { statusCode: 200, headers, body: JSON.stringify(result) };
+    }
+
+    // SFX endpoint
+    if (routePath === '/generate-sfx') {
+      const b = body as Record<string, unknown>;
+      const validCategories = ['jump','hit','pickup','ui','explosion','powerup','shoot','random'];
+      const validStyles = ['retro','modern','organic','glitch','random'];
+      const category = b.category;
+      const style = b.style;
+      const lengthSeconds = Number(b.lengthSeconds);
+      if (!category || typeof category !== 'string' || !validCategories.includes(category)) {
+        throw new Error(`"category" must be one of: ${validCategories.join(', ')}`);
+      }
+      if (!style || typeof style !== 'string' || !validStyles.includes(style)) {
+        throw new Error(`"style" must be one of: ${validStyles.join(', ')}`);
+      }
+      if (!Number.isFinite(lengthSeconds) || lengthSeconds < 0.1 || lengthSeconds > 10) {
+        throw new Error('"lengthSeconds" must be a number between 0.1 and 10');
+      }
+      if (b.seed !== undefined && !Number.isInteger(Number(b.seed))) {
+        throw new Error('"seed" must be an integer');
+      }
+      const result = await generateProceduralSfx(b as any); // validated above
+      return { statusCode: 200, headers, body: JSON.stringify(result) };
     }
 
     // Route by path
