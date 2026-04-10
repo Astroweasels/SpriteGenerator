@@ -11,7 +11,7 @@ interface AnimationPreviewProps {
 export const AnimationPreview: React.FC<AnimationPreviewProps> = ({ spriteSheet, activeSequenceId }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(true);
-  const [fps, setFps] = useState(8);
+  const [fps, setFps] = useState(4);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [prevSequenceId, setPrevSequenceId] = useState(activeSequenceId);
   const previewScale = 3;

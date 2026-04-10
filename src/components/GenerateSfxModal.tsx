@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './GenerateSfxModal.css';
 
 export type GenerateSfxParams = {
@@ -24,13 +24,18 @@ export const GenerateSfxModal: React.FC<GenerateSfxModalProps> = ({ onClose, onD
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [format, setFormat] = useState('wav');
   const [error, setError] = useState<string | null>(null);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [volume, setVolume] = useState(0.8);
 
-  const params: GenerateSfxParams = { category, style, lengthSeconds };
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // Keep audio volume in sync with slider
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  const generateAudio = useCallback(async (params: GenerateSfxParams) => {
     setLoading(true);
-    setAudioUrl(null);
     setError(null);
     try {
       const res = await fetch(`${apiBase}/generate-sfx`, {
@@ -51,6 +56,38 @@ export const GenerateSfxModal: React.FC<GenerateSfxModalProps> = ({ onClose, onD
     } finally {
       setLoading(false);
     }
+  }, [apiBase]);
+
+  // Auto-play: re-generate after params change (debounced — shorter for SFX since they're brief)
+  useEffect(() => {
+    if (!autoPlay) return;
+    const timer = setTimeout(() => {
+      generateAudio({ category, style, lengthSeconds });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [category, style, lengthSeconds, autoPlay]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-play new audio when it arrives
+  useEffect(() => {
+    if (audioUrl && autoPlay && audioRef.current) {
+      audioRef.current.volume = volume;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [audioUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleManualGenerate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    generateAudio({ category, style, lengthSeconds });
+  };
+
+  const handleToggleAutoPlay = () => {
+    if (autoPlay) {
+      setAutoPlay(false);
+      audioRef.current?.pause();
+    } else {
+      setAutoPlay(true);
+      generateAudio({ category, style, lengthSeconds });
+    }
   };
 
   const handleDownload = () => {
@@ -61,17 +98,17 @@ export const GenerateSfxModal: React.FC<GenerateSfxModalProps> = ({ onClose, onD
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onDownload(audioUrl, format, params);
+    onDownload(audioUrl, format, { category, style, lengthSeconds });
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="generate-sfx-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🔊 Generate SFX</h2>
+          <h2>🔊 Generate SFX {autoPlay && <span className="auto-play-indicator">● LIVE</span>}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-        <form className="modal-body" onSubmit={handleGenerate}>
+        <form className="modal-body" onSubmit={handleManualGenerate}>
           <div className="form-group">
             <label>Category</label>
             <select value={category} onChange={e => setCategory(e.target.value)}>
@@ -98,11 +135,21 @@ export const GenerateSfxModal: React.FC<GenerateSfxModalProps> = ({ onClose, onD
 
           {error && <div className="sfx-error">{error}</div>}
 
-          {audioUrl && (
-            <div className="sfx-preview">
-              <audio controls src={audioUrl} />
+          <div className="sfx-preview">
+            <audio ref={audioRef} controls src={audioUrl ?? undefined} loop={autoPlay} />
+            <div className="volume-row">
+              <span className="vol-icon">🔈</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(volume * 100)}
+                onChange={e => setVolume(Number(e.target.value) / 100)}
+                className="volume-slider"
+              />
+              <span className="vol-icon">🔊</span>
             </div>
-          )}
+          </div>
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
@@ -111,9 +158,19 @@ export const GenerateSfxModal: React.FC<GenerateSfxModalProps> = ({ onClose, onD
                 Download
               </button>
             )}
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Generating...' : audioUrl ? 'Regenerate' : 'Generate'}
+            <button
+              type="button"
+              className={`btn-autoplay ${autoPlay ? 'active' : ''}`}
+              onClick={handleToggleAutoPlay}
+              title={autoPlay ? 'Stop auto-play mode' : 'Enable auto-play — regenerates when you change options'}
+            >
+              {autoPlay ? (loading ? '⏳ Generating...' : '⏹ Stop') : '▶ Auto-play'}
             </button>
+            {!autoPlay && (
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Generating...' : audioUrl ? 'Regenerate' : 'Generate'}
+              </button>
+            )}
           </div>
         </form>
       </div>

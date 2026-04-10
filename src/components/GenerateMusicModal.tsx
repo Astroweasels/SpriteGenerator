@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './GenerateMusicModal.css';
 
 export type GenerateMusicParams = {
@@ -26,13 +26,18 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [format, setFormat] = useState('wav');
   const [error, setError] = useState<string | null>(null);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [volume, setVolume] = useState(0.8);
 
-  const params: GenerateMusicParams = { style, mood, lengthSeconds, tempo };
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // Keep audio volume in sync with slider
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  const generateAudio = useCallback(async (params: GenerateMusicParams) => {
     setLoading(true);
-    setAudioUrl(null);
     setError(null);
     try {
       const res = await fetch(`${apiBase}/generate-music`, {
@@ -53,6 +58,38 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
     } finally {
       setLoading(false);
     }
+  }, [apiBase]);
+
+  // Auto-play: re-generate after params change (debounced)
+  useEffect(() => {
+    if (!autoPlay) return;
+    const timer = setTimeout(() => {
+      generateAudio({ style, mood, lengthSeconds, tempo });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [style, mood, lengthSeconds, tempo, autoPlay]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-play new audio when it arrives
+  useEffect(() => {
+    if (audioUrl && autoPlay && audioRef.current) {
+      audioRef.current.volume = volume;
+      audioRef.current.play().catch(() => {});
+    }
+  }, [audioUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleManualGenerate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    generateAudio({ style, mood, lengthSeconds, tempo });
+  };
+
+  const handleToggleAutoPlay = () => {
+    if (autoPlay) {
+      setAutoPlay(false);
+      audioRef.current?.pause();
+    } else {
+      setAutoPlay(true);
+      generateAudio({ style, mood, lengthSeconds, tempo });
+    }
   };
 
   const handleDownload = () => {
@@ -63,17 +100,17 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    onDownload(audioUrl, format, params);
+    onDownload(audioUrl, format, { style, mood, lengthSeconds, tempo });
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="generate-music-modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🎼 Generate Music</h2>
+          <h2>🎼 Generate Music {autoPlay && <span className="auto-play-indicator">● LIVE</span>}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-        <form className="modal-body" onSubmit={handleGenerate}>
+        <form className="modal-body" onSubmit={handleManualGenerate}>
           <div className="form-group">
             <label>Style</label>
             <select value={style} onChange={e => setStyle(e.target.value)}>
@@ -99,11 +136,21 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
 
           {error && <div className="music-error">{error}</div>}
 
-          {audioUrl && (
-            <div className="music-preview">
-              <audio controls src={audioUrl} />
+          <div className="music-preview">
+            <audio ref={audioRef} controls src={audioUrl ?? undefined} loop={autoPlay} />
+            <div className="volume-row">
+              <span className="vol-icon">🔈</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(volume * 100)}
+                onChange={e => setVolume(Number(e.target.value) / 100)}
+                className="volume-slider"
+              />
+              <span className="vol-icon">🔊</span>
             </div>
-          )}
+          </div>
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
@@ -112,9 +159,19 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
                 Download
               </button>
             )}
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Generating...' : audioUrl ? 'Regenerate' : 'Generate'}
+            <button
+              type="button"
+              className={`btn-autoplay ${autoPlay ? 'active' : ''}`}
+              onClick={handleToggleAutoPlay}
+              title={autoPlay ? 'Stop auto-play mode' : 'Enable auto-play — regenerates when you change options'}
+            >
+              {autoPlay ? (loading ? '⏳ Generating...' : '⏹ Stop') : '▶ Auto-play'}
             </button>
+            {!autoPlay && (
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Generating...' : audioUrl ? 'Regenerate' : 'Generate'}
+              </button>
+            )}
           </div>
         </form>
       </div>

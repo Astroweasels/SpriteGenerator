@@ -35,17 +35,37 @@ const FrameThumbnail: React.FC<{
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, size, size);
 
-    // Checkerboard background
-    const checkSize = Math.max(2, Math.floor(size / width));
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        ctx.fillStyle = (x + y) % 2 === 0 ? '#555' : '#444';
-        ctx.fillRect(x * checkSize, y * checkSize, checkSize, checkSize);
-      }
-    }
-
     const scale = Math.floor(size / Math.max(width, height));
-    renderFrameToCanvas(ctx, frame, width, height, scale);
+
+    if (scale >= 1) {
+      // Normal-size sprites: render pixel-by-pixel directly
+      const checkSize = Math.max(2, Math.floor(size / width));
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          ctx.fillStyle = (x + y) % 2 === 0 ? '#555' : '#444';
+          ctx.fillRect(x * checkSize, y * checkSize, checkSize, checkSize);
+        }
+      }
+      renderFrameToCanvas(ctx, frame, width, height, scale);
+    } else {
+      // Large images (e.g. background layers): render to offscreen at scale=1, then downscale
+      const offscreen = document.createElement('canvas');
+      offscreen.width = width;
+      offscreen.height = height;
+      const offCtx = offscreen.getContext('2d')!;
+      offCtx.fillStyle = '#444';
+      offCtx.fillRect(0, 0, width, height);
+      renderFrameToCanvas(offCtx, frame, width, height, 1);
+
+      // Fit inside the thumbnail preserving aspect ratio
+      const dstW = size;
+      const dstH = Math.round(size * height / width);
+      const dstY = Math.floor((size - dstH) / 2);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(0, 0, size, size);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(offscreen, 0, 0, width, height, 0, dstY, dstW, dstH);
+    }
   }, [frame, width, height, size]);
 
   return <canvas ref={canvasRef} width={size} height={size} className="frame-thumbnail-canvas" />;
