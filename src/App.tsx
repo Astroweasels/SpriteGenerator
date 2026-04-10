@@ -519,24 +519,36 @@ function App() {
     try {
       const { pixels, width: pw, height: ph } = await importPng(file, 128);
       saveUndo();
-      // Resize canvas to match image
+      // Resize canvas to match image; clear pixels on other frames so their
+      // thumbnails don't render stale data at wrong dimensions
       setSpriteSheet(prev => {
         const frame = prev.frames[activeFrameIndex];
         if (!frame) return prev;
         const layer = frame.layers.find(l => l.id === frame.activeLayerId);
         if (!layer) return prev;
+        const dimensionsChanged = pw !== prev.width || ph !== prev.height;
         return {
           ...prev,
           width: pw,
           height: ph,
           frames: prev.frames.map((f, i) => {
-            if (i !== activeFrameIndex) return f;
-            return {
-              ...f,
-              layers: f.layers.map(l =>
-                l.id === frame.activeLayerId ? { ...l, pixels } : l
-              ),
-            };
+            if (i === activeFrameIndex) {
+              return {
+                ...f,
+                layers: f.layers.map(l =>
+                  l.id === frame.activeLayerId ? { ...l, pixels } : l
+                ),
+              };
+            }
+            // If canvas size changed, clear pixels on other frames to avoid
+            // mismatched coordinates showing up as garbage in thumbnails
+            if (dimensionsChanged) {
+              return {
+                ...f,
+                layers: f.layers.map(l => ({ ...l, pixels: new Map() })),
+              };
+            }
+            return f;
           }),
         };
       });
