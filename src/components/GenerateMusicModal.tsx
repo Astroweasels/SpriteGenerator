@@ -37,13 +37,18 @@ export const GenerateMusicModal: React.FC<GenerateMusicModalProps> = ({ onClose,
   }, [volume]);
 
   const generateAudio = useCallback(async (params: GenerateMusicParams) => {
+    const clamped: GenerateMusicParams = {
+      ...params,
+      lengthSeconds: Math.max(2, Math.min(60, params.lengthSeconds)),
+      tempo: params.tempo !== undefined ? Math.max(60, Math.min(200, params.tempo)) : undefined,
+    };
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${apiBase}/generate-music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify(clamped),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
